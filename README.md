@@ -167,7 +167,7 @@ $ make check-tests
 ```
 
 ## Learning
-# Lecture
+### Lecture
 | Schedule    |                        Content                     | Condition |
 | ----------- | -------------------------------------------------- | --------- |
 | Lecture #01 | Course Overview & Relational Model                 |     √     |
@@ -197,7 +197,7 @@ $ make check-tests
 | Lecture #25 | Guest Speaker: Snowflake                           |           |
 | Lecture #26 | Final Review                                       |           |
 
-# Lab
+### Lab
 | Schedule   |             Content           | Condition |
 | ---------- | ------------------------------| --------- |
 | Project #0 | C++ Primer                    |     √     |
