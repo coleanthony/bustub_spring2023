@@ -180,7 +180,7 @@ $ make check-tests
 | Lecture #08 | Trees Indexes                                      |     √     |
 | Lecture #09 | Index Concurrency Control                          |     √     |
 | Lecture #10 | Sorting & Aggregations Algorithms                  |     √     |
-| Lecture #11 | Joins Algorithms                                   |     √     |
+| Lecture #11 | Joins Algorithms                                   |           |
 | Lecture #12 | Query Execution I                                  |           |
 | Lecture #13 | Query Execution II                                 |           |
 | Lecture #14 | Query Planning & Optimization                      |           |
