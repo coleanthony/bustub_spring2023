@@ -196,7 +196,6 @@ $ make check-tests
 | Lecture #24 | Putting Application Logic into the Database        |           |
 | Lecture #25 | Guest Speaker: Snowflake                           |           |
 | Lecture #26 | Final Review                                       |           |
-—————————————————————————————————————————————————————————————————————————————————
 
 # Lab
 | Schedule   |             Content           | Condition |
@@ -206,4 +205,3 @@ $ make check-tests
 | Project #2 | B+Tree Index                  |           |
 | Project #3 | Query Execution               |           |
 | Project #4 | Concurrency Control           |           |
-——————————————————————————————————————————————————————————
