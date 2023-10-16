@@ -125,7 +125,8 @@ class Trie {
   // Otherwise, returns the new trie.
   auto Remove(std::string_view key) const -> Trie;
 
-  auto GetRoot() const -> std::shared_ptr<const TrieNode> {return this->root_;}
+  // Get the root of the trie, should only be used in test cases.
+  auto GetRoot() const -> std::shared_ptr<const TrieNode> { return root_; }
 };
 
 }  // namespace bustub
