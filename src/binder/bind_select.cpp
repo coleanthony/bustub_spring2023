@@ -283,9 +283,7 @@ auto Binder::BindJoin(duckdb_libpgquery::PGJoinExpr *root) -> std::unique_ptr<Bo
       join_type = JoinType::RIGHT;
       break;
     }
-    default: {
-      throw bustub::Exception(fmt::format("Join type {} not supported", static_cast<int>(root->jointype)));
-    }
+    default: { throw bustub::Exception(fmt::format("Join type {} not supported", static_cast<int>(root->jointype))); }
   }
   auto left_table = BindTableRef(root->larg);
   auto right_table = BindTableRef(root->rarg);

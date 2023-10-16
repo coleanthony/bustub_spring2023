@@ -95,9 +95,7 @@ class HashUtil {
         auto raw = val->GetAs<uint64_t>();
         return Hash<uint64_t>(&raw);
       }
-      default: {
-        BUSTUB_ASSERT(false, "Unsupported type.");
-      }
+      default: { BUSTUB_ASSERT(false, "Unsupported type."); }
     }
   }
 };

@@ -82,7 +82,7 @@ class BasicPageGuard {
   friend class ReadPageGuard;
   friend class WritePageGuard;
 
-  [[maybe_unused]] BufferPoolManager *bpm_{nullptr};
+  [[maybe_unused]] BufferPoolManager *bpm_ { nullptr };
   Page *page_{nullptr};
   bool is_dirty_{false};
 };
