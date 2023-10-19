@@ -20,6 +20,7 @@
 
 #include "common/config.h"
 #include "common/macros.h"
+#include "type/boolean_type.h"
 
 namespace bustub {
 
@@ -152,10 +153,17 @@ class LRUKReplacer {
   // Remove maybe_unused if you start using them.
   [[maybe_unused]] std::unordered_map<frame_id_t, LRUKNode> node_store_;
   [[maybe_unused]] size_t current_timestamp_ { 0 };
-  [[maybe_unused]] size_t curr_size_ { 0 };
-  [[maybe_unused]] size_t replacer_size_;
-  [[maybe_unused]] size_t k_;
-  [[maybe_unused]] std::mutex latch_;
+  size_t curr_size_ { 0 };
+  size_t replacer_size_;
+  size_t k_;
+  std::mutex latch_;
+
+  std::unordered_map<frame_id_t, int> access_count_;
+  std::list<frame_id_t> history_list_;
+  std::unordered_map<frame_id_t, std::list<frame_id_t>::iterator> history_map_;
+  std::list<frame_id_t> lruk_cache_list_;
+  std::unordered_map<frame_id_t, std::list<frame_id_t>::iterator> lruk_cache_map_;
+  std::unordered_map<frame_id_t,bool> is_evictable_;
 };
 
 }  // namespace bustub
