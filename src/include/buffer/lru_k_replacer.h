@@ -12,6 +12,7 @@
 
 #pragma once
 
+#include <cstddef>
 #include <limits>
 #include <list>
 #include <mutex>  // NOLINT
@@ -158,7 +159,7 @@ class LRUKReplacer {
   size_t k_;
   std::mutex latch_;
 
-  std::unordered_map<frame_id_t, int> access_count_;
+  std::unordered_map<frame_id_t, size_t> access_count_;
   std::list<frame_id_t> history_list_;
   std::unordered_map<frame_id_t, std::list<frame_id_t>::iterator> history_map_;
   std::list<frame_id_t> lruk_cache_list_;
