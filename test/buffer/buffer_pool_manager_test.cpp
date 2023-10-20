@@ -13,6 +13,7 @@
 #include "buffer/buffer_pool_manager.h"
 
 #include <cstdio>
+#include <iostream>
 #include <random>
 #include <string>
 
@@ -22,7 +23,7 @@ namespace bustub {
 
 // NOLINTNEXTLINE
 // Check whether pages containing terminal characters can be recovered
-TEST(BufferPoolManagerTest, DISABLED_BinaryDataTest) {
+TEST(BufferPoolManagerTest, BinaryDataTest) {
   const std::string db_name = "test.db";
   const size_t buffer_pool_size = 10;
   const size_t k = 5;
@@ -88,7 +89,7 @@ TEST(BufferPoolManagerTest, DISABLED_BinaryDataTest) {
 }
 
 // NOLINTNEXTLINE
-TEST(BufferPoolManagerTest, DISABLED_SampleTest) {
+TEST(BufferPoolManagerTest, SampleTest) {
   const std::string db_name = "test.db";
   const size_t buffer_pool_size = 10;
   const size_t k = 5;
@@ -106,6 +107,7 @@ TEST(BufferPoolManagerTest, DISABLED_SampleTest) {
   // Scenario: Once we have a page, we should be able to read and write content.
   snprintf(page0->GetData(), BUSTUB_PAGE_SIZE, "Hello");
   EXPECT_EQ(0, strcmp(page0->GetData(), "Hello"));
+  //std::cout<<"data0:"<<std::string(page0->GetData())<<std::endl;
 
   // Scenario: We should be able to create new pages until we fill up the buffer pool.
   for (size_t i = 1; i < buffer_pool_size; ++i) {
@@ -128,6 +130,7 @@ TEST(BufferPoolManagerTest, DISABLED_SampleTest) {
 
   // Scenario: We should be able to fetch the data we wrote a while ago.
   page0 = bpm->FetchPage(0);
+  //std::cout<<"data1:"<<std::string(page0->GetData())<<std::endl;
   EXPECT_EQ(0, strcmp(page0->GetData(), "Hello"));
 
   // Scenario: If we unpin page 0 and then make a new page, all the buffer pages should

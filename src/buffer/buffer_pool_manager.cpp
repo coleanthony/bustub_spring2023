@@ -137,27 +137,80 @@ auto BufferPoolManager::FetchPage(page_id_t page_id, [[maybe_unused]] AccessType
   replacer_->RecordAccess(frame_id);
   replacer_->SetEvictable(frame_id, false);
 
-  return &pages_[page_id];
+  return &pages_[frame_id];
 }
 
 auto BufferPoolManager::UnpinPage(page_id_t page_id, bool is_dirty, [[maybe_unused]] AccessType access_type) -> bool {
+  std::scoped_lock<std::mutex> lock(latch_);
 
-  return false;
+  if(page_table_.find(page_id)==page_table_.end()){
+    return false;
+  }
+  frame_id_t frame_id=page_table_[page_id];
+  if (pages_[frame_id].GetPinCount()<=0) {
+    return false;
+  }
+  pages_[frame_id].pin_count_--;
+  if (is_dirty) {
+    pages_[frame_id].is_dirty_=is_dirty;
+  }
+  if (pages_[frame_id].GetPinCount()==0) {
+    replacer_->SetEvictable(frame_id, true);
+  }
+  return true;
 }
 
 auto BufferPoolManager::FlushPage(page_id_t page_id) -> bool { 
-
-  return false; 
+  std::scoped_lock<std::mutex> lock(latch_);
+  //cannot be INVALID_PAGE_ID
+  if (page_id==INVALID_PAGE_ID) {
+    return false;
+  }
+  if (page_table_.find(page_id)==page_table_.end()) {
+    return false;
+  }
+  frame_id_t frame_id=page_table_[page_id];
+  disk_manager_->WritePage(page_id, pages_[frame_id].GetData());
+  pages_[frame_id].is_dirty_=false;
+  return true;
 }
 
 void BufferPoolManager::FlushAllPages() {
-
-
+  std::scoped_lock<std::mutex> lock(latch_);
+  for(auto [page_id,frame_id]:page_table_){
+    disk_manager_->WritePage(page_id, pages_[frame_id].GetData());
+    pages_[frame_id].is_dirty_=false;
+  }
 }
 
 auto BufferPoolManager::DeletePage(page_id_t page_id) -> bool { 
+  std::scoped_lock<std::mutex> lock(latch_);
+  //If page_id is not in the buffer pool, do nothing and return true.
+  if (page_id==INVALID_PAGE_ID) {
+    return false;
+  }
+  if (page_table_.find(page_id)==page_table_.end()) {
+    return false;
+  }
+  //If the page is pinned and cannot be deleted, return false immediately
+  frame_id_t frame_id=page_table_[page_id];
+  if (pages_[frame_id].GetPinCount()>0) {
+    return false;
+  }
+  //delete the page
+  //stop tracking the frame in the replacer and add the frame back to the free list
+  replacer_->Remove(frame_id);
 
-  return false; 
+  pages_[frame_id].ResetMemory();
+  pages_[frame_id].is_dirty_=false;
+  pages_[frame_id].pin_count_=0;
+  pages_[frame_id].page_id_=INVALID_PAGE_ID;
+
+  free_list_.push_back(frame_id);
+  page_table_.erase(page_id);
+  DeallocatePage(page_id);
+
+  return true; 
 }
 
 auto BufferPoolManager::AllocatePage() -> page_id_t { return next_page_id_++; }
