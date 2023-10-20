@@ -107,7 +107,7 @@ TEST(BufferPoolManagerTest, SampleTest) {
   // Scenario: Once we have a page, we should be able to read and write content.
   snprintf(page0->GetData(), BUSTUB_PAGE_SIZE, "Hello");
   EXPECT_EQ(0, strcmp(page0->GetData(), "Hello"));
-  //std::cout<<"data0:"<<std::string(page0->GetData())<<std::endl;
+  // std::cout<<"data0:"<<std::string(page0->GetData())<<std::endl;
 
   // Scenario: We should be able to create new pages until we fill up the buffer pool.
   for (size_t i = 1; i < buffer_pool_size; ++i) {
@@ -130,7 +130,7 @@ TEST(BufferPoolManagerTest, SampleTest) {
 
   // Scenario: We should be able to fetch the data we wrote a while ago.
   page0 = bpm->FetchPage(0);
-  //std::cout<<"data1:"<<std::string(page0->GetData())<<std::endl;
+  // std::cout<<"data1:"<<std::string(page0->GetData())<<std::endl;
   EXPECT_EQ(0, strcmp(page0->GetData(), "Hello"));
 
   // Scenario: If we unpin page 0 and then make a new page, all the buffer pages should
