@@ -201,7 +201,7 @@ $ make check-tests
 | Schedule   |             Content           | Condition |
 | ---------- | ------------------------------| --------- |
 | Project #0 | C++ Primer                    |     √     |
-| Project #1 | Buffer Pool Manager           |           |
+| Project #1 | Buffer Pool Manager           |     √     |
 | Project #2 | B+Tree Index                  |           |
 | Project #3 | Query Execution               |           |
 | Project #4 | Concurrency Control           |           |
