@@ -1,10 +1,15 @@
 #include <sstream>
 #include <string>
+#include <utility>
 
+#include "common/config.h"
 #include "common/exception.h"
 #include "common/logger.h"
 #include "common/rid.h"
 #include "storage/index/b_plus_tree.h"
+#include "storage/page/b_plus_tree_header_page.h"
+#include "storage/page/b_plus_tree_internal_page.h"
+#include "storage/page/page_guard.h"
 
 namespace bustub {
 
@@ -26,7 +31,9 @@ BPLUSTREE_TYPE::BPlusTree(std::string name, page_id_t header_page_id, BufferPool
  * Helper function to decide whether current b+tree is empty
  */
 INDEX_TEMPLATE_ARGUMENTS
-auto BPLUSTREE_TYPE::IsEmpty() const -> bool { return true; }
+auto BPLUSTREE_TYPE::IsEmpty() const -> bool { 
+  return bpm_->FetchPageRead(header_page_id_).PageId()==INVALID_PAGE_ID;
+}
 /*****************************************************************************
  * SEARCH
  *****************************************************************************/
@@ -38,8 +45,33 @@ auto BPLUSTREE_TYPE::IsEmpty() const -> bool { return true; }
 INDEX_TEMPLATE_ARGUMENTS
 auto BPLUSTREE_TYPE::GetValue(const KeyType &key, std::vector<ValueType> *result, Transaction *txn) -> bool {
   // Declaration of context instance.
-  Context ctx;
-  (void)ctx;
+  ReadPageGuard readpageguard=bpm_->FetchPageRead(header_page_id_);
+  auto root_page=readpageguard.As<BPlusTreeHeaderPage>();
+  int page_id=root_page->root_page_id_;
+  if (page_id==INVALID_PAGE_ID) {
+    return false;
+  }
+  ReadPageGuard readpg=bpm_->FetchPageRead(page_id);
+  readpageguard.Drop();
+  while (true) {
+    auto internal_page=readpg.As<InternalPage>();
+    if (internal_page->IsLeafPage()) {
+      //isleafpage, get the data
+      auto leaf_page=readpg.As<LeafPage>();
+      ValueType val;
+      bool findanswer=leaf_page->FindValue(key,&val,comparator_);
+      if (findanswer) {
+        result->push_back(val);
+        return true;
+      }
+      return false;
+    }      
+    //else, it's the internalpage. continue to find the leaf_node
+    auto findval=internal_page->FindValue(key,comparator_);
+    int pid=findval.first;
+    ReadPageGuard readpg_temp=bpm_->FetchPageRead(pid);
+    readpg=std::move(readpg_temp);
+  }
   return false;
 }
 
@@ -56,8 +88,8 @@ auto BPLUSTREE_TYPE::GetValue(const KeyType &key, std::vector<ValueType> *result
 INDEX_TEMPLATE_ARGUMENTS
 auto BPLUSTREE_TYPE::Insert(const KeyType &key, const ValueType &value, Transaction *txn) -> bool {
   // Declaration of context instance.
-  Context ctx;
-  (void)ctx;
+
+
   return false;
 }
 

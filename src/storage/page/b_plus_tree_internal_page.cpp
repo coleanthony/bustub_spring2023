@@ -13,8 +13,10 @@
 #include <iostream>
 #include <iterator>
 #include <sstream>
+#include <utility>
 
 #include "common/exception.h"
+#include "common/macros.h"
 #include "storage/page/b_plus_tree_internal_page.h"
 #include "storage/page/b_plus_tree_page.h"
 #include "test_util.h"
@@ -38,10 +40,16 @@ void B_PLUS_TREE_INTERNAL_PAGE_TYPE::Init(int max_size) {
  * array offset)
  */
 INDEX_TEMPLATE_ARGUMENTS
-auto B_PLUS_TREE_INTERNAL_PAGE_TYPE::KeyAt(int index) const -> KeyType { return array_[index].first;}
+auto B_PLUS_TREE_INTERNAL_PAGE_TYPE::KeyAt(int index) const -> KeyType { 
+  BUSTUB_ASSERT(index>=0&&index<GetSize(), "index out of range");
+  return array_[index].first;
+}
 
 INDEX_TEMPLATE_ARGUMENTS
-void B_PLUS_TREE_INTERNAL_PAGE_TYPE::SetKeyAt(int index, const KeyType &key) { array_[index].first=key;}
+void B_PLUS_TREE_INTERNAL_PAGE_TYPE::SetKeyAt(int index, const KeyType &key) { 
+  BUSTUB_ASSERT(index>=0&&index<GetSize(), "index out of range");
+  array_[index].first=key;
+}
 
 INDEX_TEMPLATE_ARGUMENTS
 auto B_PLUS_TREE_INTERNAL_PAGE_TYPE::ValueIndex(const ValueType &value) const -> int{
@@ -53,11 +61,36 @@ auto B_PLUS_TREE_INTERNAL_PAGE_TYPE::ValueIndex(const ValueType &value) const ->
  * offset)
  */
 INDEX_TEMPLATE_ARGUMENTS
-auto B_PLUS_TREE_INTERNAL_PAGE_TYPE::ValueAt(int index) const -> ValueType { return array_[index].second;}
+auto B_PLUS_TREE_INTERNAL_PAGE_TYPE::ValueAt(int index) const -> ValueType { 
+  BUSTUB_ASSERT(index>=0&&index<GetSize(), "index out of range");
+  return array_[index].second;
+}
 
 INDEX_TEMPLATE_ARGUMENTS
-void B_PLUS_TREE_INTERNAL_PAGE_TYPE::SetValueAt(int index,const ValueType &value){ array_[index].second=value;}
+void B_PLUS_TREE_INTERNAL_PAGE_TYPE::SetValueAt(int index,const ValueType &value){ 
+  BUSTUB_ASSERT(index>=0&&index<GetSize(), "index out of range");
+  array_[index].second=value;
+}
 
+INDEX_TEMPLATE_ARGUMENTS
+auto B_PLUS_TREE_INTERNAL_PAGE_TYPE::FindValue(const KeyType &key, KeyComparator &comparator) const -> std::pair<ValueType, int>{
+  // use binarysearch to find the answer
+  int left=0;
+  int right=GetSize()-1;
+  while(left<=right){
+    int mid=(left+right)/2;
+    auto res=comparator(key,KeyAt(mid));
+    if (res<0) {
+      right=mid-1;
+    }else if (res>0) {
+      left=mid+1;
+    }else{
+      // find the answer
+      return std::make_pair(ValueAt(mid), mid);
+    }
+  }
+  return std::make_pair(ValueAt(right), right);
+}
 
 
 // valuetype for internalNode should be page id_t

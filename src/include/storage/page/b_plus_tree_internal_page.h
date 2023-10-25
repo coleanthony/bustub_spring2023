@@ -76,6 +76,8 @@ class BPlusTreeInternalPage : public BPlusTreePage {
 
   void SetValueAt(int index,const ValueType &value);
 
+  auto FindValue(const KeyType &key, KeyComparator &comparator) const -> std::pair<ValueType, int>;   
+
 
   /**
    * @brief For test only, return a string representing all keys in
