@@ -38,6 +38,8 @@ class IndexIterator {
 
  private:
   // add your own private member variables here
+  
+
 };
 
 }  // namespace bustub

@@ -1,3 +1,4 @@
+#include <deque>
 #include <sstream>
 #include <string>
 #include <utility>
@@ -5,10 +6,14 @@
 #include "common/config.h"
 #include "common/exception.h"
 #include "common/logger.h"
+#include "common/macros.h"
 #include "common/rid.h"
+#include "execution/plans/abstract_plan.h"
 #include "storage/index/b_plus_tree.h"
 #include "storage/page/b_plus_tree_header_page.h"
 #include "storage/page/b_plus_tree_internal_page.h"
+#include "storage/page/b_plus_tree_page.h"
+#include "storage/page/page.h"
 #include "storage/page/page_guard.h"
 
 namespace bustub {
@@ -47,7 +52,7 @@ auto BPLUSTREE_TYPE::GetValue(const KeyType &key, std::vector<ValueType> *result
   // Declaration of context instance.
   ReadPageGuard readpageguard=bpm_->FetchPageRead(header_page_id_);
   auto root_page=readpageguard.As<BPlusTreeHeaderPage>();
-  int page_id=root_page->root_page_id_;
+  page_id_t page_id=root_page->root_page_id_;
   if (page_id==INVALID_PAGE_ID) {
     return false;
   }
@@ -88,9 +93,115 @@ auto BPLUSTREE_TYPE::GetValue(const KeyType &key, std::vector<ValueType> *result
 INDEX_TEMPLATE_ARGUMENTS
 auto BPLUSTREE_TYPE::Insert(const KeyType &key, const ValueType &value, Transaction *txn) -> bool {
   // Declaration of context instance.
+  WritePageGuard wg=bpm_->FetchPageWrite(header_page_id_);
+  auto headpage=wg.As<BPlusTreeHeaderPage>();
+  page_id_t headpageid=headpage->root_page_id_;
+  if (headpageid==INVALID_PAGE_ID) {
+    // if current tree is empty, start new tree, update root page id and insert entry
+    // get a new page
+    Page *page=bpm_->NewPage(&headpageid);
+    BUSTUB_ASSERT(page!=nullptr, "allocate page error!");
+    WritePageGuard new_wg={bpm_,page};
+    auto leafpage=new_wg.AsMut<LeafPage>();
 
+    //inseat data into leaf page
+    leafpage->Init(leaf_max_size_);
+    leafpage->InsertValue(key,value,comparator_);
 
-  return false;
+    //change the header
+    auto headpage_change=wg.AsMut<BPlusTreeHeaderPage>();
+    headpage_change->root_page_id_=page->GetPageId();
+    return true;
+  }    
+
+  // otherwise insert into leaf page.
+  // find the right position to insert the value
+  return InsertIntoLeafPage(key,value,txn);
+}
+
+INDEX_TEMPLATE_ARGUMENTS
+auto BPLUSTREE_TYPE::InsertIntoLeafPage(const KeyType &key, const ValueType &value, Transaction *txn, page_id_t headpageid) -> bool {
+  //inseat the kv into the leaf page
+  //find the position
+  std::deque<int> indexes;
+  std::deque<WritePageGuard> writeguards;
+  page_id_t pageid=headpageid;
+
+  //find the leaf node
+  while (true) {
+    WritePageGuard internal_wg=bpm_->FetchPageWrite(pageid);
+    auto internalpage=internal_wg.As<InternalPage>();
+    if (internalpage->GetSize()<internalpage->GetMaxSize()) {
+      while (!writeguards.empty()) {
+        writeguards.pop_front();
+      }
+    }
+    writeguards.push_back(std::move(internal_wg));
+    if (internalpage->IsLeafPage()) {
+      //find the leafpage to insert val
+      break;
+    }
+    //else, it's the internalpage. continue to find the leaf_node
+    auto findval=internalpage->FindValue(key,comparator_);
+    pageid=findval.first;
+    indexes.push_back(findval.second);
+  }
+
+  //successfully find the leafnode
+  auto &wg=writeguards.back();
+  auto leafpage=wg.As<LeafPage>();
+  std::pair<int, bool> findval=leafpage->FindValueIndex(key,comparator_);
+  if (findval.second) {
+    // the key is already in the leafpage
+    while (!writeguards.empty()) {
+      writeguards.pop_front();
+    }
+    return false;
+  }
+  // !findval.second
+  if (leafpage->GetSize()<leafpage->GetMaxSize()) {
+    //the page is not full,just insert the page
+    auto leafpage_w=wg.AsMut<LeafPage>();
+    leafpage_w->InsertValueAt(key,value,findval.first);
+    return true;
+  }
+  
+  // !findval.second and the leafpage is full
+  // get a new page
+  Page *newpage=bpm_->NewPage(&pageid);
+  BUSTUB_ASSERT(newpage, "failed to initialize a new page");
+  WritePageGuard leafpage_write_guard={bpm_,newpage};
+  //split the old page into two parts
+  auto leaf_page_old=wg.AsMut<LeafPage>();
+  auto leaf_page_new=wg.AsMut<LeafPage>();
+  leaf_page_new->Init(leaf_max_size_);
+  leaf_page_old->MoveHalfTo(leaf_page_new);
+  leaf_page_new->SetNextPageId(leaf_page_old->GetNextPageId());
+  leaf_page_old->SetNextPageId(pageid);
+
+  //insert the value
+  if (findval.first<=leaf_page_old->GetSize()) {
+    leaf_page_old->InsertValueAt(key,value,findval.first);
+  }else{
+    leaf_page_new->InsertValueAt(key,value,findval.first-leaf_page_old->GetSize());
+  }
+
+  //after inserting value, we need to find whether the parent node is full.
+  page_id_t last_pageid=wg.PageId();
+  std::pair<KeyType,page_id_t> up=std::make_pair(leaf_page_new->KeyAt(0),pageid);
+  writeguards.pop_back();
+
+  while(!writeguards.empty()){
+    WritePageGuard wg=std::move(writeguards.back());
+    writeguards.pop_back();
+    last_pageid=wg.PageId();
+    auto internel_page=wg.AsMut<InternalPage>();
+    int index=indexes.back();
+    indexes.pop_back();
+    
+
+  }
+
 }
 
 /*****************************************************************************
