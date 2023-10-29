@@ -116,7 +116,7 @@ auto BPLUSTREE_TYPE::Insert(const KeyType &key, const ValueType &value, Transact
 
   // otherwise insert into leaf page.
   // find the right position to insert the value
-  return InsertIntoLeafPage(key,value,txn);
+  return InsertIntoLeafPage(key,value,txn,headpageid);
 }
 
 INDEX_TEMPLATE_ARGUMENTS
@@ -171,9 +171,10 @@ auto BPLUSTREE_TYPE::InsertIntoLeafPage(const KeyType &key, const ValueType &val
   Page *newpage=bpm_->NewPage(&pageid);
   BUSTUB_ASSERT(newpage, "failed to initialize a new page");
   WritePageGuard leafpage_write_guard={bpm_,newpage};
+
   //split the old page into two parts
   auto leaf_page_old=wg.AsMut<LeafPage>();
-  auto leaf_page_new=wg.AsMut<LeafPage>();
+  auto leaf_page_new=leafpage_write_guard.AsMut<LeafPage>();
   leaf_page_new->Init(leaf_max_size_);
   leaf_page_old->MoveHalfTo(leaf_page_new);
   leaf_page_new->SetNextPageId(leaf_page_old->GetNextPageId());
@@ -195,13 +196,49 @@ auto BPLUSTREE_TYPE::InsertIntoLeafPage(const KeyType &key, const ValueType &val
     WritePageGuard wg=std::move(writeguards.back());
     writeguards.pop_back();
     last_pageid=wg.PageId();
-    auto internel_page=wg.AsMut<InternalPage>();
+    auto internal_page=wg.AsMut<InternalPage>();
     int index=indexes.back();
     indexes.pop_back();
-    
+    int internel_page_size=internal_page->GetSize();
+    if(internel_page_size<internal_page->GetMaxSize()){
+      //if the internel page does not need to split
+      internal_page->InsertValueAt(up.first,up.second,index+1);
+      return true;
+    }
 
+    //the internel page need to split
+    Page *internal_newpage=bpm_->NewPage(&pageid);
+    BUSTUB_ASSERT(internal_newpage, "failed to initialize a new page");
+    WritePageGuard internal_page_writeguard={bpm_,internal_newpage};
+    auto internal_page_new=internal_page_writeguard.AsMut<InternalPage>();
+    internal_page_new->Init(internal_max_size_);
+    internal_page->MoveHalfTo(internal_page_new);
+
+    //then deal with the upper node
+    if (index<internal_page->GetSize()) {
+      internal_page->InsertValueAt(up.first,up.second,index+1);
+    }else{
+      internal_page_new->InsertValueAt(up.first,up.second,index-internal_page->GetSize()+1);
+    }
+    // does not meet the demand of getminsize
+    if (internal_page_new->GetSize()<internal_page_new->GetMinSize()) {
+      internal_page->MoveBackToFront(internal_page_new);
+    }
+
+    //update the up value
+    up=std::make_pair(internal_page_new->KeyAt(0), pageid);
   }
 
+  // if it is the header page
+  Page *page=bpm_->NewPage(&pageid);
+  BUSTUB_ASSERT(page, "failed to initialize a new page");
+  WritePageGuard page_writeguard={bpm_,page};
+  auto page_new=page_writeguard.AsMut<InternalPage>();
+  page_new->SetInitVal(internal_max_size_,last_pageid,up.first,up.second);
+  WritePageGuard header_wg=bpm_->FetchPageWrite(header_page_id_);
+  auto root_page=header_wg.AsMut<BPlusTreeHeaderPage>();
+  root_page->root_page_id_=page->GetPageId();
+  return true;
 }
 
 /*****************************************************************************

@@ -35,6 +35,15 @@ void B_PLUS_TREE_INTERNAL_PAGE_TYPE::Init(int max_size) {
   SetSize(0);
   SetMaxSize(max_size);
 }
+
+INDEX_TEMPLATE_ARGUMENTS
+void B_PLUS_TREE_INTERNAL_PAGE_TYPE::SetInitVal(int max_size,const ValueType &left,const KeyType &mid,const ValueType &right){
+  Init(max_size);
+  array_[0].second=left;
+  array_[1]=std::make_pair(mid,right);
+  SetSize(2);
+}
+
 /*
  * Helper method to get/set the key associated with input "index"(a.k.a
  * array offset)
@@ -72,13 +81,14 @@ void B_PLUS_TREE_INTERNAL_PAGE_TYPE::SetValueAt(int index,const ValueType &value
   array_[index].second=value;
 }
 
+
 INDEX_TEMPLATE_ARGUMENTS
 auto B_PLUS_TREE_INTERNAL_PAGE_TYPE::FindValue(const KeyType &key, KeyComparator &comparator) const -> std::pair<ValueType, int>{
   // use binarysearch to find the answer
   int left=0;
   int right=GetSize()-1;
   while(left<=right){
-    int mid=(left+right)/2;
+    int mid=left+(right-left)/2;
     auto res=comparator(key,KeyAt(mid));
     if (res<0) {
       right=mid-1;
@@ -92,6 +102,55 @@ auto B_PLUS_TREE_INTERNAL_PAGE_TYPE::FindValue(const KeyType &key, KeyComparator
   return std::make_pair(ValueAt(right), right);
 }
 
+INDEX_TEMPLATE_ARGUMENTS
+void B_PLUS_TREE_INTERNAL_PAGE_TYPE::InsertValueAt(const KeyType &key,const ValueType &value,int position){
+  int n=GetSize();
+  BUSTUB_ASSERT(n+1<=GetMaxSize(), "can not insert data into a full internalpage");
+  BUSTUB_ASSERT(position>=0&&position<=n, "position error");
+  for (auto i=GetSize(); i>position;i--) {
+    array_[i]=std::move(array_[i-1]);
+  }
+  array_[position]=std::make_pair(key, value);
+  IncreaseSize(1);
+}
+
+INDEX_TEMPLATE_ARGUMENTS
+void B_PLUS_TREE_INTERNAL_PAGE_TYPE::MoveHalfTo(BPlusTreeInternalPage *newpage){
+  int size=GetSize()/2;
+  int startsize=GetSize()-size;
+  int newpagecursize=newpage->GetSize();
+  BUSTUB_ASSERT(newpagecursize+size<=newpage->GetMaxSize(),"no enough space to store the data");
+  for (int i=newpagecursize;i<newpagecursize+size;i++) {
+    newpage->array_[i]=std::move(this->array_[i-newpagecursize+startsize]);
+  }
+  newpage->IncreaseSize(size);
+  this->IncreaseSize(-size);
+}
+
+INDEX_TEMPLATE_ARGUMENTS
+void B_PLUS_TREE_INTERNAL_PAGE_TYPE::MoveAllTo(BPlusTreeInternalPage *newpage){
+  int size=GetSize();
+  int newpagecursize=newpage->GetSize();
+  BUSTUB_ASSERT(newpagecursize+size<=newpage->GetMaxSize(), "no enough space to store the data");
+  for (int i=newpagecursize; i<newpagecursize+size; i++) {
+    newpage->array_[i]=std::move(this->array_[i-newpagecursize]);
+  }
+  newpage->IncreaseSize(size);
+  this->IncreaseSize(-size);
+}
+
+INDEX_TEMPLATE_ARGUMENTS
+void B_PLUS_TREE_INTERNAL_PAGE_TYPE::MoveBackToFront(BPlusTreeInternalPage *newpage){
+  int size=GetSize();
+  int newpagesize=newpage->GetSize();
+  BUSTUB_ASSERT(newpagesize+1<=newpage->GetMaxSize(),"no enough space to store the data");
+  for (int i=newpagesize; i>=1; i--) {
+    newpage->array_[i]=std::move(newpage->array_[i-1]);
+  }
+  newpage->array_[0]=std::move(this->array_[size-1]);
+  newpage->IncreaseSize(1);
+  this->IncreaseSize(-1);
+}
 
 // valuetype for internalNode should be page id_t
 template class BPlusTreeInternalPage<GenericKey<4>, page_id_t, GenericComparator<4>>;

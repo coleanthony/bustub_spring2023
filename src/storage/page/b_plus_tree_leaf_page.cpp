@@ -134,10 +134,11 @@ void B_PLUS_TREE_LEAF_PAGE_TYPE::InsertValueAt(const KeyType &key,const ValueTyp
 INDEX_TEMPLATE_ARGUMENTS
 void B_PLUS_TREE_LEAF_PAGE_TYPE::MoveHalfTo(BPlusTreeLeafPage *newpage){
   int size=GetSize()/2;
+  int startsize=GetSize()-size;
   int newpagecursize=newpage->GetSize();
   BUSTUB_ASSERT(newpagecursize+size<=newpage->GetMaxSize(),"no enough space to store the data");
   for (int i=newpagecursize;i<newpagecursize+size;i++) {
-    newpage->array_[i]=std::move(this->array_[i-newpagecursize+size]);
+    newpage->array_[i]=std::move(this->array_[i-newpagecursize+startsize]);
   }
   newpage->IncreaseSize(size);
   this->IncreaseSize(-size);
