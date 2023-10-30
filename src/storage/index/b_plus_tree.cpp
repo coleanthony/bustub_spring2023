@@ -73,8 +73,8 @@ auto BPLUSTREE_TYPE::GetValue(const KeyType &key, std::vector<ValueType> *result
     }      
     //else, it's the internalpage. continue to find the leaf_node
     auto findval=internal_page->FindValue(key,comparator_);
-    int pid=findval.first;
-    ReadPageGuard readpg_temp=bpm_->FetchPageRead(pid);
+    page_id=findval.first;
+    ReadPageGuard readpg_temp=bpm_->FetchPageRead(page_id);
     readpg=std::move(readpg_temp);
   }
   return false;
@@ -90,17 +90,19 @@ auto BPLUSTREE_TYPE::GetValue(const KeyType &key, std::vector<ValueType> *result
  * @return: since we only support unique key, if user try to insert duplicate
  * keys return false, otherwise return true.
  */
+ 
 INDEX_TEMPLATE_ARGUMENTS
 auto BPLUSTREE_TYPE::Insert(const KeyType &key, const ValueType &value, Transaction *txn) -> bool {
   // Declaration of context instance.
-  WritePageGuard wg=bpm_->FetchPageWrite(header_page_id_);
-  auto headpage=wg.As<BPlusTreeHeaderPage>();
+  WritePageGuard headerwg=bpm_->FetchPageWrite(header_page_id_);
+  auto headpage=headerwg.As<BPlusTreeHeaderPage>();
   page_id_t headpageid=headpage->root_page_id_;
   if (headpageid==INVALID_PAGE_ID) {
+    std::cout<<"insert value into header page"<<std::endl;
     // if current tree is empty, start new tree, update root page id and insert entry
     // get a new page
     Page *page=bpm_->NewPage(&headpageid);
-    BUSTUB_ASSERT(page!=nullptr, "allocate page error!");
+    BUSTUB_ASSERT(page, "allocate page error!");
     WritePageGuard new_wg={bpm_,page};
     auto leafpage=new_wg.AsMut<LeafPage>();
 
@@ -109,18 +111,14 @@ auto BPLUSTREE_TYPE::Insert(const KeyType &key, const ValueType &value, Transact
     leafpage->InsertValue(key,value,comparator_);
 
     //change the header
-    auto headpage_change=wg.AsMut<BPlusTreeHeaderPage>();
+    auto headpage_change=headerwg.AsMut<BPlusTreeHeaderPage>();
     headpage_change->root_page_id_=page->GetPageId();
     return true;
   }    
 
   // otherwise insert into leaf page.
   // find the right position to insert the value
-  return InsertIntoLeafPage(key,value,txn,headpageid);
-}
-
-INDEX_TEMPLATE_ARGUMENTS
-auto BPLUSTREE_TYPE::InsertIntoLeafPage(const KeyType &key, const ValueType &value, Transaction *txn, page_id_t headpageid) -> bool {
+  std::cout<<"insert into leaf page"<<std::endl;
   //inseat the kv into the leaf page
   //find the position
   std::deque<int> indexes;
@@ -129,9 +127,12 @@ auto BPLUSTREE_TYPE::InsertIntoLeafPage(const KeyType &key, const ValueType &val
 
   //find the leaf node
   while (true) {
+    std::cout<<"find the internal page"<<std::endl;
     WritePageGuard internal_wg=bpm_->FetchPageWrite(pageid);
+    std::cout<<"FetchPageWrite the internal page"<<std::endl;
     auto internalpage=internal_wg.As<InternalPage>();
     if (internalpage->GetSize()<internalpage->GetMaxSize()) {
+      headerwg.Drop();
       while (!writeguards.empty()) {
         writeguards.pop_front();
       }
@@ -146,6 +147,8 @@ auto BPLUSTREE_TYPE::InsertIntoLeafPage(const KeyType &key, const ValueType &val
     pageid=findval.first;
     indexes.push_back(findval.second);
   }
+
+  std::cout<<"successfully find the leafnode"<<std::endl;
 
   //successfully find the leafnode
   auto &wg=writeguards.back();

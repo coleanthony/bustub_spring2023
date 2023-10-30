@@ -19,7 +19,7 @@
 #include "common/macros.h"
 #include "storage/page/b_plus_tree_internal_page.h"
 #include "storage/page/b_plus_tree_page.h"
-#include "test_util.h"
+// #include "test_util.h"
 
 namespace bustub {
 /*****************************************************************************
@@ -36,8 +36,9 @@ void B_PLUS_TREE_INTERNAL_PAGE_TYPE::Init(int max_size) {
   SetMaxSize(max_size);
 }
 
+
 INDEX_TEMPLATE_ARGUMENTS
-void B_PLUS_TREE_INTERNAL_PAGE_TYPE::SetInitVal(int max_size,const ValueType &left,const KeyType &mid,const ValueType &right){
+void B_PLUS_TREE_INTERNAL_PAGE_TYPE::SetInitVal(int max_size,const ValueType &left,const KeyType &mid,const ValueType &right) {
   Init(max_size);
   array_[0].second=left;
   array_[1]=std::make_pair(mid,right);
@@ -50,7 +51,6 @@ void B_PLUS_TREE_INTERNAL_PAGE_TYPE::SetInitVal(int max_size,const ValueType &le
  */
 INDEX_TEMPLATE_ARGUMENTS
 auto B_PLUS_TREE_INTERNAL_PAGE_TYPE::KeyAt(int index) const -> KeyType { 
-  BUSTUB_ASSERT(index>=0&&index<GetSize(), "index out of range");
   return array_[index].first;
 }
 
@@ -71,21 +71,13 @@ auto B_PLUS_TREE_INTERNAL_PAGE_TYPE::ValueIndex(const ValueType &value) const ->
  */
 INDEX_TEMPLATE_ARGUMENTS
 auto B_PLUS_TREE_INTERNAL_PAGE_TYPE::ValueAt(int index) const -> ValueType { 
-  BUSTUB_ASSERT(index>=0&&index<GetSize(), "index out of range");
   return array_[index].second;
 }
 
 INDEX_TEMPLATE_ARGUMENTS
-void B_PLUS_TREE_INTERNAL_PAGE_TYPE::SetValueAt(int index,const ValueType &value){ 
-  BUSTUB_ASSERT(index>=0&&index<GetSize(), "index out of range");
-  array_[index].second=value;
-}
-
-
-INDEX_TEMPLATE_ARGUMENTS
-auto B_PLUS_TREE_INTERNAL_PAGE_TYPE::FindValue(const KeyType &key, KeyComparator &comparator) const -> std::pair<ValueType, int>{
+auto B_PLUS_TREE_INTERNAL_PAGE_TYPE::FindValue(const KeyType &key, const KeyComparator &comparator) const -> std::pair<ValueType, int>{
   // use binarysearch to find the answer
-  int left=0;
+  int left=1;
   int right=GetSize()-1;
   while(left<=right){
     int mid=left+(right-left)/2;
@@ -101,6 +93,7 @@ auto B_PLUS_TREE_INTERNAL_PAGE_TYPE::FindValue(const KeyType &key, KeyComparator
   }
   return std::make_pair(ValueAt(right), right);
 }
+
 
 INDEX_TEMPLATE_ARGUMENTS
 void B_PLUS_TREE_INTERNAL_PAGE_TYPE::InsertValueAt(const KeyType &key,const ValueType &value,int position){

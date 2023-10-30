@@ -76,9 +76,6 @@ class BPlusTree {
   // Insert a key-value pair into this B+ tree.
   auto Insert(const KeyType &key, const ValueType &value, Transaction *txn = nullptr) -> bool;
 
-  // Insert a key-value pair into this B+ tree's leafpage.
-  auto InsertIntoLeafPage(const KeyType &key, const ValueType &value, Transaction *txn = nullptr, page_id_t headpageid=INVALID_PAGE_ID) -> bool;
-
   // Remove a key and its value from this B+ tree.
   void Remove(const KeyType &key, Transaction *txn);
 

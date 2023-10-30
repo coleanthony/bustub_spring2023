@@ -99,7 +99,7 @@ auto B_PLUS_TREE_LEAF_PAGE_TYPE::FindValue(const KeyType &key, ValueType *value,
 INDEX_TEMPLATE_ARGUMENTS
 auto B_PLUS_TREE_LEAF_PAGE_TYPE::InsertValue(const KeyType &key,const ValueType &value, const KeyComparator &comparator) ->bool{
   //insert node into the leaf page
-  int n=GetSize()-1;
+  int n=GetSize();
   int startindex=0;
   if (n != 0) {
     auto findval=FindValueIndex(key,comparator);
@@ -110,12 +110,13 @@ auto B_PLUS_TREE_LEAF_PAGE_TYPE::InsertValue(const KeyType &key,const ValueType 
     startindex=findval.first;
   }
   // can not insert into a full leaf
-  if (n+1==GetMaxSize()) { return false;}
+  BUSTUB_ASSERT(n+1<=GetMaxSize(), "no space to store the data");
   for (auto i=GetSize(); i>startindex; i--) {
     array_[i] = std::move(array_[i-1]);
   }
   array_[startindex]=std::make_pair(key, value);
   IncreaseSize(1);
+  std::cout<<"b_plus_tree_leaf_page: insert data successfully"<<std::endl;
   return true;
 }
 

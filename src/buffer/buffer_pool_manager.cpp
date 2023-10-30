@@ -225,13 +225,15 @@ auto BufferPoolManager::FetchPageBasic(page_id_t page_id) -> BasicPageGuard {
 
 auto BufferPoolManager::FetchPageRead(page_id_t page_id) -> ReadPageGuard {
   Page *fetchpage = FetchPage(page_id);
-  fetchpage->RLatch();
+  fetchpage->rwlatch_.RLock();
   return {this, fetchpage};
 }
 
 auto BufferPoolManager::FetchPageWrite(page_id_t page_id) -> WritePageGuard {
   Page *fetchpage = FetchPage(page_id);
-  fetchpage->WLatch();
+  // std::cout<<"fetchpage page"<<std::endl;
+  fetchpage->rwlatch_.WLock();
+  // std::cout<<"fetchpage page ok"<<std::endl;
   return {this, fetchpage};
 }
 
