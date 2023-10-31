@@ -13,6 +13,7 @@
 #include "buffer/buffer_pool_manager.h"
 #include <pthread.h>
 #include <cstddef>
+#include <ostream>
 
 #include "common/config.h"
 #include "common/exception.h"
@@ -86,6 +87,41 @@ auto BufferPoolManager::NewPage(page_id_t *page_id) -> Page * {
 
   return &pages_[frame_id];
 }
+
+/*
+auto BufferPoolManager::FetchPage(page_id_t page_id, [[maybe_unused]] AccessType access_type) -> Page * {
+  std::scoped_lock latch(latch_);
+  Page *page;
+  frame_id_t fid;
+  page_id_t pid;
+  if (page_table_.count(page_id) != 0U) {
+    fid = page_table_[page_id];
+  } else {
+    if (!free_list_.empty()) {
+      fid = free_list_.front();
+      free_list_.pop_front();
+    } else if (replacer_->Evict(&fid)) {
+      page = &pages_[fid];
+      pid = page->GetPageId();
+      BUSTUB_ASSERT(!page->GetPinCount(), "Pin count should be 0.");
+      if (page->IsDirty()) { disk_manager_->WritePage(pid, page->GetData());
+}
+      page->ResetMemory();
+      page_table_.erase(pid);
+    } else {
+      return nullptr;
+    }
+    page = &pages_[fid];
+    disk_manager_->ReadPage(page_id, page->GetData());
+    page->page_id_ = page_id;
+    page->is_dirty_ = false;
+  }
+  replacer_->RecordAccess(fid);
+  replacer_->SetEvictable(fid, false);
+  pages_[fid].pin_count_++;
+  page_table_[page_id] = fid;
+  return &pages_[fid];
+}*/
 
 auto BufferPoolManager::FetchPage(page_id_t page_id, [[maybe_unused]] AccessType access_type) -> Page * {
   std::scoped_lock latch(latch_);
@@ -232,6 +268,7 @@ auto BufferPoolManager::FetchPageRead(page_id_t page_id) -> ReadPageGuard {
 auto BufferPoolManager::FetchPageWrite(page_id_t page_id) -> WritePageGuard {
   Page *fetchpage = FetchPage(page_id);
   // std::cout<<"fetchpage page"<<std::endl;
+  // std::cout<<"pageid:"<<fetchpage->GetPageId()<<std::endl;
   fetchpage->rwlatch_.WLock();
   // std::cout<<"fetchpage page ok"<<std::endl;
   return {this, fetchpage};

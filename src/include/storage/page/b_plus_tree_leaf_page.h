@@ -15,6 +15,7 @@
 #include <vector>
 
 #include "storage/page/b_plus_tree_page.h"
+#include "storage/page/hash_table_page_defs.h"
 #include "type/value.h"
 
 namespace bustub {
@@ -60,20 +61,20 @@ class BPlusTreeLeafPage : public BPlusTreePage {
   void SetNextPageId(page_id_t next_page_id);
   auto KeyAt(int index) const -> KeyType;
   auto ValueAt(int index) const -> ValueType;
+  auto KeyValueAt(int index) const -> const MappingType &;
 
   // use binarysearch find the target value's index
-  auto FindValueIndex(const KeyType &key, const KeyComparator &comparator) const->std::pair<int, bool>;
+  auto FindValueIndex(const KeyType &key, const KeyComparator &comparator) const -> std::pair<int, bool>;
   // search the target value
-  auto FindValue(const KeyType &key,ValueType *value, const KeyComparator &comparator) const->bool;   
+  auto FindValue(const KeyType &key, ValueType *value, const KeyComparator &comparator) const -> bool;
   // insert value into leafpage
-  auto InsertValue(const KeyType &key,const ValueType &value, const KeyComparator &comparator) ->bool;  
+  auto InsertValue(const KeyType &key, const ValueType &value, const KeyComparator &comparator) -> bool;
   // insert value into leafpage in a given position
-  void InsertValueAt(const KeyType &key,const ValueType &value,int pos);
-  //move half of the data to newpage
+  void InsertValueAt(const KeyType &key, const ValueType &value, int pos);
+  // move half of the data to newpage
   void MoveHalfTo(BPlusTreeLeafPage *newpage);
-    //move all of the data to newpage
+  // move all of the data to newpage
   void MoveAllTo(BPlusTreeLeafPage *newpage);
-  
 
   /**
    * @brief for test only return a string representing all keys in

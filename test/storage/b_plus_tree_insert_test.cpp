@@ -161,8 +161,11 @@ TEST(BPlusTreeTests, InsertTest3) {
   int64_t start_key = 1;
   int64_t current_key = start_key;
   index_key.SetFromInteger(start_key);
+
+  std::cout << "start iterator test" << std::endl;
   for (auto iterator = tree.Begin(index_key); iterator != tree.End(); ++iterator) {
     auto location = (*iterator).second;
+    // std::cout<<location.ToString()<<std::endl;
     EXPECT_EQ(location.GetPageId(), 0);
     EXPECT_EQ(location.GetSlotNum(), current_key);
     current_key = current_key + 1;
@@ -173,12 +176,17 @@ TEST(BPlusTreeTests, InsertTest3) {
   start_key = 3;
   current_key = start_key;
   index_key.SetFromInteger(start_key);
+
+  std::cout << "start iterator key test" << std::endl;
+
   for (auto iterator = tree.Begin(index_key); iterator != tree.End(); ++iterator) {
     auto location = (*iterator).second;
     EXPECT_EQ(location.GetPageId(), 0);
     EXPECT_EQ(location.GetSlotNum(), current_key);
     current_key = current_key + 1;
   }
+
+  std::cout << "test successfully" << std::endl;
 
   bpm->UnpinPage(HEADER_PAGE_ID, true);
   delete transaction;

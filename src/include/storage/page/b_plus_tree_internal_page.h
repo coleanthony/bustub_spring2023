@@ -10,9 +10,8 @@
 //===----------------------------------------------------------------------===//
 #pragma once
 
-#include <queue>
 #include <string>
-
+#include <utility>
 #include "storage/page/b_plus_tree_page.h"
 #include "type/value.h"
 
@@ -75,18 +74,17 @@ class BPlusTreeInternalPage : public BPlusTreePage {
   auto ValueAt(int index) const -> ValueType;
 
   // search the target value
-  auto FindValue(const KeyType &key, const KeyComparator &comparator) const -> std::pair<ValueType, int>;   
+  auto FindValue(const KeyType &key, const KeyComparator &comparator) const -> std::pair<ValueType, int>;
   // insert value into internal page in a given position
-  void InsertValueAt(const KeyType &key,const ValueType &value,int pos);
-  //move half of the data to newpage
+  void InsertValueAt(const KeyType &key, const ValueType &value, int pos);
+  // move half of the data to newpage
   void MoveHalfTo(BPlusTreeInternalPage *newpage);
-  //move all of the data to newpage
+  // move all of the data to newpage
   void MoveAllTo(BPlusTreeInternalPage *newpage);
-  //move the backdata to the front of the newpage
+  // move the backdata to the front of the newpage
   void MoveBackToFront(BPlusTreeInternalPage *newpage);
-  //set header value
-  void SetInitVal(int max_size ,const ValueType &left, const KeyType &mid, const ValueType &right);
-  
+  // set header value
+  void SetInitVal(int max_size, const ValueType &left, const KeyType &mid, const ValueType &right);
 
   /**
    * @brief For test only, return a string representing all keys in
@@ -117,6 +115,5 @@ class BPlusTreeInternalPage : public BPlusTreePage {
  private:
   // Flexible array member for page data.
   MappingType array_[0];
-
 };
 }  // namespace bustub
