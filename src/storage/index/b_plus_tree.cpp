@@ -314,10 +314,38 @@ void BPLUSTREE_TYPE::Remove(const KeyType &key, Transaction *txn) {
   }
 
   //no enough elements in the leafpage
+  //we need to borrow from the left of right brother. If the requirement is not met, we need to implement the merge strategy.
+  bool isChildLeaf=true;
+  while(writeguards.size()>=2){
+    auto child_wg=std::move(writeguards.back());
+    writeguards.pop_back();
+    auto &parent_wg=writeguards.back();
+    //borrow strategy
+    if (Borrow(parent_wg,child_wg,indexes.back(),isChildLeaf)) {
+      //can borrow, release the resources and return
+      headerwg.Drop();
+      while (!writeguards.empty()) {
+        writeguards.pop_front();
+      }
+      return;
+    }
+    //can not borrow, merge
+    Merge(parent_wg,child_wg,indexes.back(),isChildLeaf);
+    isChildLeaf=false;
+    indexes.pop_back();
+  }
 
-  
+  //judge the header page size
+
+
 
 }
+
+INDEX_TEMPLATE_ARGUMENTS
+bool BPLUSTREE_TYPE::
+
+
+
 
 /*****************************************************************************
  * INDEX ITERATOR
