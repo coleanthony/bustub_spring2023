@@ -315,13 +315,13 @@ void BPLUSTREE_TYPE::Remove(const KeyType &key, Transaction *txn) {
 
   //no enough elements in the leafpage
   //we need to borrow from the left of right brother. If the requirement is not met, we need to implement the merge strategy.
-  bool isChildLeaf=true;
+  bool is_child_leaf=true;
   while(writeguards.size()>=2){
     auto child_wg=std::move(writeguards.back());
     writeguards.pop_back();
     auto &parent_wg=writeguards.back();
     //borrow strategy
-    if (Borrow(parent_wg,child_wg,indexes.back(),isChildLeaf)) {
+    if (Borrow(parent_wg,child_wg,indexes.back(),is_child_leaf)) {
       //can borrow, release the resources and return
       headerwg.Drop();
       while (!writeguards.empty()) {
@@ -329,23 +329,95 @@ void BPLUSTREE_TYPE::Remove(const KeyType &key, Transaction *txn) {
       }
       return;
     }
-    //can not borrow, merge
-    Merge(parent_wg,child_wg,indexes.back(),isChildLeaf);
-    isChildLeaf=false;
+    //can not borrow, merge 
+    Merge(parent_wg,child_wg,indexes.back(),is_child_leaf);
+    is_child_leaf=false;
     indexes.pop_back();
   }
-
-  //judge the header page size
-
-
-
+  // there is one left in writeguards
+  // consider it's condition
+  BasicPageGuard &wg_head=writeguards.back();
+  writeguards.pop_back();
+  auto internal_page_r=wg_head.As<InternalPage>();
+  if (internal_page_r->GetSize()>=internal_page_r->GetMinSize()||internal_page_r->IsLeafPage()) {
+    return;
+  }
+  if (internal_page_r->GetSize()==1) {
+    auto head_page_nxt=wg_head.AsMut<InternalPage>();
+    auto headpage = headerwg.AsMut<BPlusTreeHeaderPage>();
+    headpage->root_page_id_=head_page_nxt->ValueAt(0);
+  }
 }
 
 INDEX_TEMPLATE_ARGUMENTS
-bool BPLUSTREE_TYPE::
+auto BPLUSTREE_TYPE::Borrow(BasicPageGuard &parent_wg,BasicPageGuard &child_wg,int childindex,bool isChildLeaf)->bool{
+  auto parent_page_r=parent_wg.As<InternalPage>();
+  int leftindex=-1;
+  int rightindex=-1;
+  if (childindex>0) {leftindex=childindex-1;}
+  if (childindex<parent_page_r->GetSize()-1) {rightindex=childindex+1;}
+  //first borrow from left
+  if (leftindex!=-1) {
+    page_id_t sibpageid=parent_page_r->ValueAt(leftindex);
+    BasicPageGuard sibpage_wg=bpm_->FetchPageBasic(sibpageid);
+    auto siblingpage=sibpage_wg.As<BPlusTreePage>();
+    if (siblingpage->GetSize()>siblingpage->GetMinSize()) {
+      //can borrow
+      auto parent_page_w=parent_wg.AsMut<InternalPage>();
+      if (isChildLeaf) {
+        auto sibling_page_w=sibpage_wg.AsMut<LeafPage>();
+        auto child_page_w=child_wg.AsMut<LeafPage>();
+        sibling_page_w->MoveBackToFront(child_page_w);
+        parent_page_w->SetKeyAt(childindex,child_page_w->KeyAt(0));
 
+      }else{
+        auto sibling_page_w=sibpage_wg.AsMut<InternalPage>();
+        auto child_page_w=child_wg.AsMut<InternalPage>();
+        sibling_page_w->MoveBackToFront(child_page_w);
+        parent_page_w->SetKeyAt(childindex,child_page_w->KeyAt(0));
+      }
+      return true;
+    }
+  }
 
+  //borrow from right
+  if (rightindex!=-1) {
+    page_id_t sibpageid=parent_page_r->ValueAt(rightindex);
+    BasicPageGuard sibpage_wg=bpm_->FetchPageBasic(sibpageid);
+    auto siblingpage=sibpage_wg.As<BPlusTreePage>();
+    if (siblingpage->GetSize()>siblingpage->GetMinSize()) {
+      //can borrow
+      auto parent_page_w=parent_wg.AsMut<InternalPage>();
+      if (isChildLeaf) {
+        auto sibling_page_w=sibpage_wg.AsMut<LeafPage>();
+        auto child_page_w=child_wg.AsMut<LeafPage>();
+        sibling_page_w->MoveFrontToBack(child_page_w);
+        parent_page_w->SetKeyAt(childindex+1,sibling_page_w->KeyAt(0));
 
+      }else{
+        auto sibling_page_w=sibpage_wg.AsMut<InternalPage>();
+        auto child_page_w=child_wg.AsMut<InternalPage>();
+        sibling_page_w->MoveFrontToBack(child_page_w);
+        parent_page_w->SetKeyAt(childindex+1,sibling_page_w->KeyAt(0));
+      }
+      return true;
+    }
+  }
+  return false;
+}
+
+INDEX_TEMPLATE_ARGUMENTS
+void BPLUSTREE_TYPE::Merge(BasicPageGuard &parent_wg,BasicPageGuard &child_wg,int childindex,bool isChildLeaf){
+  //merge and delete the corresponding key in parent node
+  auto parent_page=parent_wg.AsMut<InternalPage>();
+  int r=childindex;
+  if (child_wg.AsMut<InternalPage>()->GetSize()) {
+    int l=childindex>0?childindex-1:childindex;
+    
+
+  }
+  
+}
 
 /*****************************************************************************
  * INDEX ITERATOR

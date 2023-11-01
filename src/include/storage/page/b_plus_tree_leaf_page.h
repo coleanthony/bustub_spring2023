@@ -77,6 +77,10 @@ class BPlusTreeLeafPage : public BPlusTreePage {
   void MoveAllTo(BPlusTreeLeafPage *newpage);
   // remove value from current page;
   void RemoveByIndex(int remove_index);
+  // move the backdata to the front of the newpage
+  void MoveBackToFront(BPlusTreeLeafPage *newpage);
+  // move the frontdata to the back of the newpage
+  void MoveFrontToBack(BPlusTreeLeafPage *newpage);
 
   /**
    * @brief for test only return a string representing all keys in

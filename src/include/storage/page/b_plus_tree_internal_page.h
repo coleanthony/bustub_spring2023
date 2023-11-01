@@ -83,6 +83,8 @@ class BPlusTreeInternalPage : public BPlusTreePage {
   void MoveAllTo(BPlusTreeInternalPage *newpage);
   // move the backdata to the front of the newpage
   void MoveBackToFront(BPlusTreeInternalPage *newpage);
+  // move the frontdata to the back of the newpage
+  void MoveFrontToBack(BPlusTreeInternalPage *newpage);
   // set header value
   void SetInitVal(int max_size, const ValueType &left, const KeyType &mid, const ValueType &right);
 

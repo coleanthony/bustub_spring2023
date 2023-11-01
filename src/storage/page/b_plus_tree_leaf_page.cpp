@@ -175,6 +175,34 @@ void B_PLUS_TREE_LEAF_PAGE_TYPE::RemoveByIndex(int remove_index){
   IncreaseSize(-1);
 }
 
+INDEX_TEMPLATE_ARGUMENTS
+void B_PLUS_TREE_LEAF_PAGE_TYPE::MoveBackToFront(BPlusTreeLeafPage *newpage) {
+  int size = GetSize();
+  int newpagesize = newpage->GetSize();
+  BUSTUB_ASSERT(size>0, "can not move any data");
+  BUSTUB_ASSERT(newpagesize + 1 <= newpage->GetMaxSize(), "no enough space to store the data");
+  for (int i = newpagesize; i >= 1; i--) {
+    newpage->array_[i] = std::move(newpage->array_[i - 1]);
+  }
+  newpage->array_[0] = std::move(this->array_[size - 1]);
+  newpage->IncreaseSize(1);
+  this->IncreaseSize(-1);
+}
+
+INDEX_TEMPLATE_ARGUMENTS
+void B_PLUS_TREE_LEAF_PAGE_TYPE::MoveFrontToBack(BPlusTreeLeafPage *newpage) {
+  int size = GetSize();
+  int newpagesize = newpage->GetSize();
+  BUSTUB_ASSERT(size>0, "can not move any data");
+  BUSTUB_ASSERT(newpagesize + 1 <= newpage->GetMaxSize(), "no enough space to store the data");
+  newpage->array_[newpagesize]=std::move(this->array_[0]);
+  for (int i=0;i<size-1;i++) {
+    this->array_[i]=std::move(this->array_[i+1]);
+  }
+  newpage->IncreaseSize(1);
+  this->IncreaseSize(-1);
+}
+
 template class BPlusTreeLeafPage<GenericKey<4>, RID, GenericComparator<4>>;
 template class BPlusTreeLeafPage<GenericKey<8>, RID, GenericComparator<8>>;
 template class BPlusTreeLeafPage<GenericKey<16>, RID, GenericComparator<16>>;
