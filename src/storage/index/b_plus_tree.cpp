@@ -156,6 +156,7 @@ auto BPLUSTREE_TYPE::Insert(const KeyType &key, const ValueType &value, Transact
   std::pair<int, bool> findval = leafpage->FindValueIndex(key, comparator_);
   if (findval.second) {
     // the key is already in the leafpage
+    headerwg.Drop();
     while (!writeguards.empty()) {
       writeguards.pop_front();
     }
@@ -257,8 +258,65 @@ auto BPLUSTREE_TYPE::Insert(const KeyType &key, const ValueType &value, Transact
 INDEX_TEMPLATE_ARGUMENTS
 void BPLUSTREE_TYPE::Remove(const KeyType &key, Transaction *txn) {
   // Declaration of context instance.
-  Context ctx;
-  (void)ctx;
+  BasicPageGuard headerwg = bpm_->FetchPageBasic(header_page_id_);
+  auto headpage = headerwg.As<BPlusTreeHeaderPage>();
+  page_id_t headpageid = headpage->root_page_id_;
+  if (headpageid == INVALID_PAGE_ID) {
+    // the b+tree is empty
+    return;
+  }
+
+  //find the leafnode
+  std::deque<int> indexes;
+  std::deque<BasicPageGuard> writeguards;
+  page_id_t pageid = headpageid;
+
+  while (true) {
+    // std::cout<<"find the internal page"<<std::endl;
+    BasicPageGuard internal_wg = bpm_->FetchPageBasic(pageid);
+    // std::cout<<"FetchPageWrite the internal page"<<std::endl;
+    auto internalpage = internal_wg.As<InternalPage>();
+    if (internalpage->GetSize() < internalpage->GetMaxSize()) {
+      headerwg.Drop();
+      while (!writeguards.empty()) {
+        writeguards.pop_front();
+      }
+    }
+    writeguards.push_back(std::move(internal_wg));
+    if (internalpage->IsLeafPage()) {
+      // find the leafpage to insert val
+      break;
+    }
+    // else, it's the internalpage. continue to find the leaf_node
+    auto findval = internalpage->FindValue(key, comparator_);
+    pageid = findval.first;
+    indexes.push_back(findval.second);
+  }
+  // successfully find the leafnode
+  auto &wg = writeguards.back();
+  auto leafpage = wg.As<LeafPage>();
+  std::pair<int, bool> findval = leafpage->FindValueIndex(key, comparator_);
+  // the key is not in the leafpage
+  if (!findval.second) {
+    headerwg.Drop();
+    while (!writeguards.empty()) {
+      writeguards.pop_front();
+    }
+    return;
+  }
+
+  //the key is in the leafpage,delete it
+  int removekeyindex=findval.first;
+  auto leafpage_rm = wg.AsMut<LeafPage>();
+  leafpage_rm->RemoveByIndex(removekeyindex);
+  if (leafpage_rm->GetSize()>=leafpage_rm->GetMinSize()) {
+    return;
+  }
+
+  //no enough elements in the leafpage
+
+  
+
 }
 
 /*****************************************************************************

@@ -165,6 +165,16 @@ void B_PLUS_TREE_LEAF_PAGE_TYPE::MoveAllTo(BPlusTreeLeafPage *newpage) {
   this->IncreaseSize(-size);
 }
 
+INDEX_TEMPLATE_ARGUMENTS
+void B_PLUS_TREE_LEAF_PAGE_TYPE::RemoveByIndex(int remove_index){
+  int size=GetSize();
+  BUSTUB_ASSERT(remove_index<size, "index out of range");
+  for (int i=remove_index; i<size-1;i++) {
+    array_[i]=std::move(array_[i+1]);
+  }
+  IncreaseSize(-1);
+}
+
 template class BPlusTreeLeafPage<GenericKey<4>, RID, GenericComparator<4>>;
 template class BPlusTreeLeafPage<GenericKey<8>, RID, GenericComparator<8>>;
 template class BPlusTreeLeafPage<GenericKey<16>, RID, GenericComparator<16>>;
