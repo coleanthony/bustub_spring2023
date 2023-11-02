@@ -340,6 +340,7 @@ void BPLUSTREE_TYPE::Remove(const KeyType &key, Transaction *txn) {
     is_child_leaf=false;
     indexes.pop_back();
   }
+  
   // there is one left in writeguards
   // consider it's condition
   //std::cout<<"there is one left in writeguards"<<std::endl;
