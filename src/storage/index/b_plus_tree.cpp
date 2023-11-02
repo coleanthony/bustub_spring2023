@@ -1,4 +1,5 @@
 #include <deque>
+#include <ostream>
 #include <sstream>
 #include <string>
 #include <utility>
@@ -292,6 +293,8 @@ void BPLUSTREE_TYPE::Remove(const KeyType &key, Transaction *txn) {
     pageid = findval.first;
     indexes.push_back(findval.second);
   }
+
+  //std::cout<<"successfully find the leafnode"<<std::endl;
   // successfully find the leafnode
   auto &wg = writeguards.back();
   auto leafpage = wg.As<LeafPage>();
@@ -313,6 +316,7 @@ void BPLUSTREE_TYPE::Remove(const KeyType &key, Transaction *txn) {
     return;
   }
 
+  //std::cout<<"no enough elements in the leafpage, we need to borrow from the left of right brother."<<std::endl;
   //no enough elements in the leafpage
   //we need to borrow from the left of right brother. If the requirement is not met, we need to implement the merge strategy.
   bool is_child_leaf=true;
@@ -321,6 +325,7 @@ void BPLUSTREE_TYPE::Remove(const KeyType &key, Transaction *txn) {
     writeguards.pop_back();
     auto &parent_wg=writeguards.back();
     //borrow strategy
+    //std::cout<<"borrow stategy"<<std::endl;
     if (Borrow(parent_wg,child_wg,indexes.back(),is_child_leaf)) {
       //can borrow, release the resources and return
       headerwg.Drop();
@@ -330,13 +335,15 @@ void BPLUSTREE_TYPE::Remove(const KeyType &key, Transaction *txn) {
       return;
     }
     //can not borrow, merge 
+    //std::cout<<"merge stategy"<<std::endl;
     Merge(parent_wg,child_wg,indexes.back(),is_child_leaf);
     is_child_leaf=false;
     indexes.pop_back();
   }
   // there is one left in writeguards
   // consider it's condition
-  BasicPageGuard &wg_head=writeguards.back();
+  //std::cout<<"there is one left in writeguards"<<std::endl;
+  BasicPageGuard wg_head=std::move(writeguards.back());
   writeguards.pop_back();
   auto internal_page_r=wg_head.As<InternalPage>();
   if (internal_page_r->GetSize()>=internal_page_r->GetMinSize()||internal_page_r->IsLeafPage()) {
@@ -347,6 +354,7 @@ void BPLUSTREE_TYPE::Remove(const KeyType &key, Transaction *txn) {
     auto headpage = headerwg.AsMut<BPlusTreeHeaderPage>();
     headpage->root_page_id_=head_page_nxt->ValueAt(0);
   }
+  //std::cout<<"delete successfully"<<std::endl;
 }
 
 INDEX_TEMPLATE_ARGUMENTS
@@ -413,10 +421,49 @@ void BPLUSTREE_TYPE::Merge(BasicPageGuard &parent_wg,BasicPageGuard &child_wg,in
   int r=childindex;
   if (child_wg.AsMut<InternalPage>()->GetSize()) {
     int l=childindex>0?childindex-1:childindex;
-    
-
+    r=l+1;
+    BasicPageGuard siblingpage_wg=r==childindex?bpm_->FetchPageBasic(parent_page->ValueAt(l)):bpm_->FetchPageBasic(parent_page->ValueAt(r));
+    //merge the left sibling page and current page or the right sibling page and current page;
+    if (isChildLeaf) {
+      // is leaf page, change the nextpageid
+      auto child_page_w=child_wg.AsMut<LeafPage>();
+      auto sibling_page_w=siblingpage_wg.AsMut<LeafPage>();
+      if (r==childindex) {
+        sibling_page_w->SetNextPageId(child_page_w->GetNextPageId());
+      }else{
+        child_page_w->SetNextPageId(sibling_page_w->GetNextPageId());
+      }
+    }else{
+      // is internal page
+      auto child_page_w=child_wg.AsMut<InternalPage>();
+      auto sibling_page_w=siblingpage_wg.AsMut<InternalPage>();
+      if (r==childindex) {
+        child_page_w->SetKeyAt(0,parent_page->KeyAt(r));
+      }else{
+        sibling_page_w->SetKeyAt(0,parent_page->KeyAt(r));
+      }
+    }
+    //merge childpage and siblingpage
+    if (isChildLeaf) {
+      auto child_page_w=child_wg.AsMut<LeafPage>();
+      auto sibling_page_w=siblingpage_wg.AsMut<LeafPage>();
+      if (r==childindex) {
+        child_page_w->MoveAllTo(sibling_page_w);
+      }else{
+        sibling_page_w->MoveAllTo(child_page_w);
+      }
+    }else{
+      auto child_page_w=child_wg.AsMut<InternalPage>();
+      auto sibling_page_w=siblingpage_wg.AsMut<InternalPage>();
+      if (r==childindex) {
+        child_page_w->MoveAllTo(sibling_page_w);
+      }else{
+        sibling_page_w->MoveAllTo(child_page_w);
+      }
+    }
   }
-  
+  //whether we need to delete the page?
+  parent_page->RemoveByIndex(r);
 }
 
 /*****************************************************************************

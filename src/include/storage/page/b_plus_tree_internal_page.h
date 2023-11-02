@@ -87,6 +87,8 @@ class BPlusTreeInternalPage : public BPlusTreePage {
   void MoveFrontToBack(BPlusTreeInternalPage *newpage);
   // set header value
   void SetInitVal(int max_size, const ValueType &left, const KeyType &mid, const ValueType &right);
+  // remove value from current page;
+  void RemoveByIndex(int remove_index);
 
   /**
    * @brief For test only, return a string representing all keys in

@@ -156,6 +156,16 @@ void B_PLUS_TREE_INTERNAL_PAGE_TYPE::MoveFrontToBack(BPlusTreeInternalPage *newp
   this->IncreaseSize(-1);
 }
 
+INDEX_TEMPLATE_ARGUMENTS
+void B_PLUS_TREE_INTERNAL_PAGE_TYPE::RemoveByIndex(int remove_index){
+  int size=GetSize();
+  BUSTUB_ASSERT(remove_index<size, "index out of range");
+  for (int i=remove_index; i<size-1;i++) {
+    array_[i]=std::move(array_[i+1]);
+  }
+  IncreaseSize(-1);
+}
+
 // valuetype for internalNode should be page id_t
 template class BPlusTreeInternalPage<GenericKey<4>, page_id_t, GenericComparator<4>>;
 template class BPlusTreeInternalPage<GenericKey<8>, page_id_t, GenericComparator<8>>;
