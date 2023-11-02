@@ -78,11 +78,11 @@ class BPlusTree {
   // Remove a key and its value from this B+ tree.
   void Remove(const KeyType &key, Transaction *txn);
 
-  //borrow node from left of right page from the same parent
-  auto Borrow(BasicPageGuard &parent_wg,BasicPageGuard &child_wg,int childindex,bool isChildLeaf)->bool;
+  // borrow node from left of right page from the same parent
+  auto Borrow(WritePageGuard &parent_wg, WritePageGuard &child_wg, int childindex, bool isChildLeaf) -> bool;
 
-  //can not borrow, do merge process
-  void Merge(BasicPageGuard &parent_wg,BasicPageGuard &child_wg,int childindex,bool isChildLeaf);
+  // can not borrow, do merge process
+  void Merge(WritePageGuard &parent_wg, WritePageGuard &child_wg, int childindex, bool isChildLeaf);
 
   // Return the value associated with a given key
   auto GetValue(const KeyType &key, std::vector<ValueType> *result, Transaction *txn = nullptr) -> bool;

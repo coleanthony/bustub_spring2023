@@ -68,6 +68,7 @@ auto BufferPoolManager::NewPage(page_id_t *page_id) -> Page * {
     // get the frame_id to be evicted
     replacer_->Evict(&frame_id);
     page_id_t evicted_page_id = pages_[frame_id].GetPageId();
+    BUSTUB_ASSERT(!pages_[frame_id].GetPinCount(), "Pin count should be 0.");
     // If the replacement frame has a dirty page, you should write it back to the disk first. You also need to reset the
     // memory and metadata for the new page.
     if (pages_[frame_id].IsDirty()) {
@@ -77,13 +78,12 @@ auto BufferPoolManager::NewPage(page_id_t *page_id) -> Page * {
     pages_[frame_id].ResetMemory();
     page_table_.erase(evicted_page_id);
   }
+  replacer_->RecordAccess(frame_id);
+  replacer_->SetEvictable(frame_id, false);
 
   page_table_[*page_id] = frame_id;
   pages_[frame_id].page_id_ = *page_id;
   pages_[frame_id].pin_count_ = 1;
-
-  replacer_->RecordAccess(frame_id);
-  replacer_->SetEvictable(frame_id, false);
 
   return &pages_[frame_id];
 }
@@ -123,15 +123,16 @@ auto BufferPoolManager::FetchPage(page_id_t page_id, [[maybe_unused]] AccessType
   return &pages_[fid];
 }*/
 
+
 auto BufferPoolManager::FetchPage(page_id_t page_id, [[maybe_unused]] AccessType access_type) -> Page * {
   std::scoped_lock latch(latch_);
   // First search for page_id in the buffer pool
   if (page_table_.find(page_id) != page_table_.end()) {
     // find the page
     frame_id_t frame_id = page_table_[page_id];
-    pages_[frame_id].pin_count_++;
     replacer_->RecordAccess(frame_id);
     replacer_->SetEvictable(frame_id, false);
+    pages_[frame_id].pin_count_++;
     return &pages_[frame_id];
   }
 
@@ -170,44 +171,35 @@ auto BufferPoolManager::FetchPage(page_id_t page_id, [[maybe_unused]] AccessType
   // read the page from disk by calling disk_manager_->ReadPage(), and replace the old page in the frame.
   page_table_[page_id] = frame_id;
   pages_[frame_id].page_id_ = page_id;
-  pages_[frame_id].pin_count_ = 1;
 
   disk_manager_->ReadPage(page_id, pages_[frame_id].GetData());
   replacer_->RecordAccess(frame_id);
   replacer_->SetEvictable(frame_id, false);
+  pages_[frame_id].pin_count_ ++;
 
   return &pages_[frame_id];
 }
 
 auto BufferPoolManager::UnpinPage(page_id_t page_id, bool is_dirty, [[maybe_unused]] AccessType access_type) -> bool {
   std::scoped_lock latch(latch_);
-
-  if (page_table_.find(page_id) == page_table_.end()) {
-    return false;
-  }
+  if (page_table_.find(page_id) == page_table_.end()) { return false;}
   frame_id_t frame_id = page_table_[page_id];
-  if (pages_[frame_id].GetPinCount() <= 0) {
+  if (pages_[frame_id].GetPinCount()<=0) {
     return false;
   }
   pages_[frame_id].pin_count_--;
-  if (is_dirty) {
-    pages_[frame_id].is_dirty_ = is_dirty;
-  }
-  if (pages_[frame_id].GetPinCount() == 0) {
+  if (pages_[frame_id].GetPinCount() <= 0) {
     replacer_->SetEvictable(frame_id, true);
   }
+  pages_[frame_id].is_dirty_ |= is_dirty;
   return true;
 }
 
 auto BufferPoolManager::FlushPage(page_id_t page_id) -> bool {
   std::scoped_lock latch(latch_);
   // cannot be INVALID_PAGE_ID
-  if (page_id == INVALID_PAGE_ID) {
-    return false;
-  }
-  if (page_table_.find(page_id) == page_table_.end()) {
-    return false;
-  }
+  if (page_id == INVALID_PAGE_ID) { return false;}
+  if (page_table_.find(page_id) == page_table_.end()) { return false;}
   frame_id_t frame_id = page_table_[page_id];
   disk_manager_->WritePage(page_id, pages_[frame_id].GetData());
   pages_[frame_id].is_dirty_ = false;
@@ -268,9 +260,10 @@ auto BufferPoolManager::FetchPageRead(page_id_t page_id) -> ReadPageGuard {
 auto BufferPoolManager::FetchPageWrite(page_id_t page_id) -> WritePageGuard {
   Page *fetchpage = FetchPage(page_id);
   // std::cout<<"fetchpage page"<<std::endl;
-  // std::cout<<"pageid:"<<fetchpage->GetPageId()<<std::endl;
+  std::cout<<"pageid:"<<fetchpage->GetPageId()<<"  ";
+  std::cout<<"pincount: "<<fetchpage->GetPinCount()<<std::endl;
   fetchpage->rwlatch_.WLock();
-  // std::cout<<"fetchpage page ok"<<std::endl;
+  std::cout<<"fetchpage page ok"<<std::endl;
   return {this, fetchpage};
 }
 

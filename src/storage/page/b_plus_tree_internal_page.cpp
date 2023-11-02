@@ -132,7 +132,7 @@ INDEX_TEMPLATE_ARGUMENTS
 void B_PLUS_TREE_INTERNAL_PAGE_TYPE::MoveBackToFront(BPlusTreeInternalPage *newpage) {
   int size = GetSize();
   int newpagesize = newpage->GetSize();
-  BUSTUB_ASSERT(size>0, "can not move any data");
+  BUSTUB_ASSERT(size > 0, "can not move any data");
   BUSTUB_ASSERT(newpagesize + 1 <= newpage->GetMaxSize(), "no enough space to store the data");
   for (int i = newpagesize; i >= 1; i--) {
     newpage->array_[i] = std::move(newpage->array_[i - 1]);
@@ -146,22 +146,22 @@ INDEX_TEMPLATE_ARGUMENTS
 void B_PLUS_TREE_INTERNAL_PAGE_TYPE::MoveFrontToBack(BPlusTreeInternalPage *newpage) {
   int size = GetSize();
   int newpagesize = newpage->GetSize();
-  BUSTUB_ASSERT(size>0, "can not move any data");
+  BUSTUB_ASSERT(size > 0, "can not move any data");
   BUSTUB_ASSERT(newpagesize + 1 <= newpage->GetMaxSize(), "no enough space to store the data");
-  newpage->array_[newpagesize]=std::move(this->array_[0]);
-  for (int i=0;i<size-1;i++) {
-    this->array_[i]=std::move(this->array_[i+1]);
+  newpage->array_[newpagesize] = std::move(this->array_[0]);
+  for (int i = 0; i < size - 1; i++) {
+    this->array_[i] = std::move(this->array_[i + 1]);
   }
   newpage->IncreaseSize(1);
   this->IncreaseSize(-1);
 }
 
 INDEX_TEMPLATE_ARGUMENTS
-void B_PLUS_TREE_INTERNAL_PAGE_TYPE::RemoveByIndex(int remove_index){
-  int size=GetSize();
-  BUSTUB_ASSERT(remove_index<size, "index out of range");
-  for (int i=remove_index; i<size-1;i++) {
-    array_[i]=std::move(array_[i+1]);
+void B_PLUS_TREE_INTERNAL_PAGE_TYPE::RemoveByIndex(int remove_index) {
+  int size = GetSize();
+  BUSTUB_ASSERT(remove_index < size, "index out of range");
+  for (int i = remove_index; i < size - 1; i++) {
+    array_[i] = std::move(array_[i + 1]);
   }
   IncreaseSize(-1);
 }

@@ -40,6 +40,8 @@ TEST(BPlusTreeTests, DeleteTest1) {
   // create transaction
   auto *transaction = new Transaction(0);
 
+  std::cout<<"start to insert data"<<std::endl;
+
   std::vector<int64_t> keys = {1, 2, 3, 4, 5};
   for (auto key : keys) {
     int64_t value = key & 0xFFFFFFFF;
@@ -48,7 +50,7 @@ TEST(BPlusTreeTests, DeleteTest1) {
     tree.Insert(index_key, rid, transaction);
   }
 
-  std::cout<<"insert data successfully"<<std::endl;
+  std::cout << "insert data successfully" << std::endl;
 
   std::vector<RID> rids;
   for (auto key : keys) {
@@ -61,7 +63,7 @@ TEST(BPlusTreeTests, DeleteTest1) {
     EXPECT_EQ(rids[0].GetSlotNum(), value);
   }
 
-  std::cout<<"get data successfully"<<std::endl;
+  std::cout << "get data successfully" << std::endl;
 
   std::vector<int64_t> remove_keys = {1, 5};
   for (auto key : remove_keys) {
@@ -69,7 +71,7 @@ TEST(BPlusTreeTests, DeleteTest1) {
     tree.Remove(index_key, transaction);
   }
 
-  std::cout<<"delete data successfully"<<std::endl;
+  std::cout << "delete data successfully" << std::endl;
 
   int64_t size = 0;
   bool is_present;
