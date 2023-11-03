@@ -48,4 +48,83 @@ TEST(PageGuardTest, SampleTest) {
   disk_manager->ShutDown();
 }
 
+TEST(PageGuardTest, ReadTset) {
+  const std::string db_name = "test.db";
+  const size_t buffer_pool_size = 5;
+  const size_t k = 2;
+
+  auto disk_manager = std::make_shared<DiskManagerUnlimitedMemory>();
+  auto bpm = std::make_shared<BufferPoolManager>(buffer_pool_size, disk_manager.get(), k);
+
+  page_id_t page_id_temp;
+  auto *page0 = bpm->NewPage(&page_id_temp);
+
+  // test ~ReadPageGuard()
+  {
+    auto reader_guard = bpm->FetchPageRead(page_id_temp);
+    EXPECT_EQ(2, page0->GetPinCount());
+  }
+  EXPECT_EQ(1, page0->GetPinCount());
+
+  // test ReadPageGuard(ReadPageGuard &&that)
+  {
+    auto reader_guard = bpm->FetchPageRead(page_id_temp);
+    auto reader_guard_2 = ReadPageGuard(std::move(reader_guard));
+    EXPECT_EQ(2, page0->GetPinCount());
+  }
+  EXPECT_EQ(1, page0->GetPinCount());
+
+  // test ReadPageGuard::operator=(ReadPageGuard &&that)
+  {
+    auto reader_guard_1 = bpm->FetchPageRead(page_id_temp);
+    auto reader_guard_2 = bpm->FetchPageRead(page_id_temp);
+    EXPECT_EQ(3, page0->GetPinCount());
+    reader_guard_1 = std::move(reader_guard_2);
+    EXPECT_EQ(2, page0->GetPinCount());
+  }
+  EXPECT_EQ(1, page0->GetPinCount());
+
+  // Shutdown the disk manager and remove the temporary file we created.
+  disk_manager->ShutDown();
+}
+
+TEST(PageGuardTest, BPMTest) {
+  const std::string db_name = "test.db";
+  const size_t buffer_pool_size = 10;
+  const size_t k = 2;
+
+  auto disk_manager = std::make_shared<DiskManagerUnlimitedMemory>();
+  auto bpm = std::make_shared<BufferPoolManager>(buffer_pool_size, disk_manager.get(), k);
+
+  page_id_t page_id_temp;
+  auto basic_guard = bpm->NewPageGuarded(&page_id_temp);
+
+  auto page0 = bpm->FetchPage(0);
+
+  basic_guard.Drop();
+
+  auto basic_guard2 = bpm->FetchPageBasic(0);
+  basic_guard2.Drop();
+
+  bpm->UnpinPage(page0->GetPageId(), page0->IsDirty());
+
+  for (int i = 0; i < 10; ++i) {
+    bpm->NewPage(&page_id_temp);
+  }
+
+  for (size_t i = 1; i <= buffer_pool_size; ++i) {
+    bpm->UnpinPage(i, false);
+  }
+
+  page0 = bpm->FetchPage(0);
+  ASSERT_NE(nullptr, page0);
+
+  { auto read_guard = bpm->FetchPageRead(0); }
+
+  auto write_guard = bpm->FetchPageWrite(0);
+  // auto write_guard2 = bpm->FetchPageWrite(0);
+  auto basic_guard3 = bpm->FetchPageBasic(0);
+  ASSERT_EQ(page0->GetPinCount(), 3);
+}
+
 }  // namespace bustub

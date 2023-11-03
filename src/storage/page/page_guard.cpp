@@ -6,11 +6,11 @@
 namespace bustub {
 
 BasicPageGuard::BasicPageGuard(BasicPageGuard &&that) noexcept {
-  std::cout<<"get page "<<page_->GetPageId()<<std::endl;
+  Drop();
   bpm_ = that.bpm_;
   page_ = that.page_;
-  that.bpm_ = nullptr;
-  that.page_ = nullptr;
+  std::cout<<"get page "<<page_->GetPageId()<<std::endl;
+  that.Drop();
 }
 
 void BasicPageGuard::Drop() {
@@ -25,24 +25,26 @@ void BasicPageGuard::Drop() {
 
 auto BasicPageGuard::operator=(BasicPageGuard &&that) noexcept -> BasicPageGuard & {
   Drop();
-  std::cout<<"get page "<<page_->GetPageId()<<std::endl;
   bpm_ = that.bpm_;
   page_ = that.page_;
-  that.bpm_ = nullptr;
-  that.page_ = nullptr;
+  std::cout<<"get page "<<page_->GetPageId()<<std::endl;
+  that.Drop();
   return *this;
 }
 
 BasicPageGuard::~BasicPageGuard() { Drop(); };  // NOLINT
 
 ReadPageGuard::ReadPageGuard(ReadPageGuard &&that) noexcept { 
+  Drop();
   guard_ = std::move(that.guard_); 
+  that.Drop();
   std::cout<<"readpageguard get page "<<guard_.PageId()<<std::endl;
 }
 
 auto ReadPageGuard::operator=(ReadPageGuard &&that) noexcept -> ReadPageGuard & {
   Drop();
   guard_ = std::move(that.guard_);
+  that.Drop();
   std::cout<<"readpageguard get page "<<guard_.PageId()<<std::endl;
   return *this;
 }
@@ -58,13 +60,16 @@ void ReadPageGuard::Drop() {
 ReadPageGuard::~ReadPageGuard() { Drop(); }  // NOLINT
 
 WritePageGuard::WritePageGuard(WritePageGuard &&that) noexcept { 
+  Drop();
   guard_ = std::move(that.guard_); 
+  that.Drop();
   std::cout<<"writepageguard get page "<<guard_.PageId()<<std::endl;
 }
 
 auto WritePageGuard::operator=(WritePageGuard &&that) noexcept -> WritePageGuard & {
   Drop();
   guard_ = std::move(that.guard_);
+  that.Drop();
   std::cout<<"writepageguard get page "<<guard_.PageId()<<std::endl;
   return *this;
 }
