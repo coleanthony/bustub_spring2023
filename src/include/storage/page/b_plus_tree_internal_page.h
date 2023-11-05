@@ -73,6 +73,8 @@ class BPlusTreeInternalPage : public BPlusTreePage {
    */
   auto ValueAt(int index) const -> ValueType;
 
+  void SetValueAt(int index, const ValueType &value);
+
   // search the target value
   auto FindValue(const KeyType &key, const KeyComparator &comparator) const -> std::pair<ValueType, int>;
   // insert value into internal page in a given position
@@ -89,6 +91,10 @@ class BPlusTreeInternalPage : public BPlusTreePage {
   void SetInitVal(int max_size, const ValueType &left, const KeyType &mid, const ValueType &right);
   // remove value from current page;
   void RemoveByIndex(int remove_index);
+  
+  void StoleFromLeftSibling(BPlusTreeInternalPage<KeyType, ValueType, KeyComparator> *internal);
+
+  void StoleFromRightSibling(BPlusTreeInternalPage<KeyType, ValueType, KeyComparator> *internal);
 
   /**
    * @brief For test only, return a string representing all keys in

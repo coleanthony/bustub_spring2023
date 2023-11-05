@@ -62,6 +62,8 @@ class BPlusTreeLeafPage : public BPlusTreePage {
   auto KeyAt(int index) const -> KeyType;
   auto ValueAt(int index) const -> ValueType;
   auto KeyValueAt(int index) const -> const MappingType &;
+  void SetKeyAt(int index, const KeyType &key);
+  void SetValueAt(int index, const ValueType &value);
 
   // use binarysearch find the target value's index
   auto FindValueIndex(const KeyType &key, const KeyComparator &comparator) const -> std::pair<int, bool>;

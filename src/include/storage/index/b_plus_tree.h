@@ -53,6 +53,10 @@ class Context {
   // You may want to use this when getting value, but not necessary.
   std::deque<ReadPageGuard> read_set_;
 
+  std::deque<page_id_t> sibling_stack_;
+
+  std::deque<int> indexes_;
+
   auto IsRootPage(page_id_t page_id) -> bool { return page_id == root_page_id_; }
 };
 
@@ -74,6 +78,24 @@ class BPlusTree {
 
   // Insert a key-value pair into this B+ tree.
   auto Insert(const KeyType &key, const ValueType &value, Transaction *txn = nullptr) -> bool;
+
+  //InsertKey find leafnode
+  auto FindLeafNode(page_id_t page_id, const KeyType &key,const ValueType &value,Transaction *txn, Context *ctx)->bool;
+
+  //insert key into node
+  auto InsertIntoNode(LeafPage *leafpage,page_id_t page_id, const KeyType &key,const ValueType &value,Transaction *txn, Context *ctx)->bool;
+
+  //divide the leafnode
+  auto DivideLeafNode(LeafPage *leafpage, LeafPage **buddy) -> page_id_t;
+
+  //divide the internalnode
+  auto DivideInternalNode(InternalPage *internalpage, InternalPage **buddy) -> page_id_t;
+
+  //make newrootnode
+  void MakeNewRootNode(page_id_t pg1_id, page_id_t pg2_id, const KeyType &key1, const KeyType &key2,Context *ctx);
+
+  //update internalnode
+  void InsertKeyToInternalNode(const KeyType &key, page_id_t value, Context *ctx);
 
   // Remove a key and its value from this B+ tree.
   void Remove(const KeyType &key, Transaction *txn);

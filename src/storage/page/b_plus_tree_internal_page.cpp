@@ -59,6 +59,9 @@ void B_PLUS_TREE_INTERNAL_PAGE_TYPE::SetKeyAt(int index, const KeyType &key) {
 }
 
 INDEX_TEMPLATE_ARGUMENTS
+void B_PLUS_TREE_INTERNAL_PAGE_TYPE::SetValueAt(int index, const ValueType &value) { array_[index].second = value; }
+
+INDEX_TEMPLATE_ARGUMENTS
 auto B_PLUS_TREE_INTERNAL_PAGE_TYPE::ValueIndex(const ValueType &value) const -> int {
   auto it = std::find_if(array_, array_ + GetSize(), [&value](const auto &pair) { return pair.second == value; });
   return std::distance(array_, it);
@@ -164,6 +167,30 @@ void B_PLUS_TREE_INTERNAL_PAGE_TYPE::RemoveByIndex(int remove_index) {
     array_[i] = std::move(array_[i + 1]);
   }
   IncreaseSize(-1);
+}
+
+INDEX_TEMPLATE_ARGUMENTS
+void B_PLUS_TREE_INTERNAL_PAGE_TYPE::StoleFromLeftSibling(BPlusTreeInternalPage<KeyType, ValueType, KeyComparator> *internal) {
+  for (int index = internal->GetSize(); index > 0; index--) {
+    internal->SetKeyAt(index, internal->KeyAt(index - 1));
+    internal->SetValueAt(index, internal->ValueAt(index - 1));
+  }
+  internal->SetKeyAt(0, KeyAt(GetSize() - 1));
+  internal->SetValueAt(0, ValueAt(GetSize() - 1));
+  IncreaseSize(-1);
+  internal->IncreaseSize(1);
+}
+
+INDEX_TEMPLATE_ARGUMENTS
+void B_PLUS_TREE_INTERNAL_PAGE_TYPE::StoleFromRightSibling(BPlusTreeInternalPage<KeyType, ValueType, KeyComparator> *internal) {
+  internal->SetKeyAt(internal->GetSize(), KeyAt(0));
+  internal->SetValueAt(internal->GetSize(), ValueAt(0));
+  for (int index = 0; index < GetSize() - 1; index++) {
+    SetKeyAt(index, KeyAt(index + 1));
+    SetValueAt(index, ValueAt(index + 1));
+  }
+  IncreaseSize(-1);
+  internal->IncreaseSize(1);
 }
 
 // valuetype for internalNode should be page id_t

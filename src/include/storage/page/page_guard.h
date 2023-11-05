@@ -1,5 +1,6 @@
 #pragma once
 
+#include "common/macros.h"
 #include "storage/page/page.h"
 
 namespace bustub {
@@ -10,9 +11,7 @@ class BasicPageGuard {
  public:
   BasicPageGuard() = default;
 
-  BasicPageGuard(BufferPoolManager *bpm, Page *page) : bpm_(bpm), page_(page) {
-    std::cout<<"get page "<<page_->GetPageId()<<std::endl;
-  }
+  BasicPageGuard(BufferPoolManager *bpm, Page *page) : bpm_(bpm), page_(page) {}
 
   BasicPageGuard(const BasicPageGuard &) = delete;
   auto operator=(const BasicPageGuard &) -> BasicPageGuard & = delete;
@@ -72,6 +71,7 @@ class BasicPageGuard {
 
   auto GetDataMut() -> char * {
     is_dirty_ = true;
+    // BUSTUB_ASSERT(page_!=nullptr, "page is nullptr");
     return page_->GetData();
   }
 
@@ -92,9 +92,7 @@ class BasicPageGuard {
 class ReadPageGuard {
  public:
   ReadPageGuard() = default;
-  ReadPageGuard(BufferPoolManager *bpm, Page *page) : guard_(bpm, page) {
-    std::cout<<"ReadPageGuard get page "<<page->GetPageId()<<std::endl;
-  }
+  ReadPageGuard(BufferPoolManager *bpm, Page *page) : guard_(bpm, page) {}
   ReadPageGuard(const ReadPageGuard &) = delete;
   auto operator=(const ReadPageGuard &) -> ReadPageGuard & = delete;
 
@@ -154,9 +152,7 @@ class ReadPageGuard {
 class WritePageGuard {
  public:
   WritePageGuard() = default;
-  WritePageGuard(BufferPoolManager *bpm, Page *page) : guard_(bpm, page) {
-    std::cout<<"WritePageGuard get page "<<page->GetPageId()<<std::endl;
-  }
+  WritePageGuard(BufferPoolManager *bpm, Page *page) : guard_(bpm, page) {}
   WritePageGuard(const WritePageGuard &) = delete;
   auto operator=(const WritePageGuard &) -> WritePageGuard & = delete;
 

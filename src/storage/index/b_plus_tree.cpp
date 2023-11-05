@@ -1,4 +1,5 @@
 #include <deque>
+#include <iostream>
 #include <ostream>
 #include <sstream>
 #include <string>
@@ -96,157 +97,185 @@ auto BPLUSTREE_TYPE::GetValue(const KeyType &key, std::vector<ValueType> *result
 INDEX_TEMPLATE_ARGUMENTS
 auto BPLUSTREE_TYPE::Insert(const KeyType &key, const ValueType &value, Transaction *txn) -> bool {
   // Declaration of context instance.
-  // std::cout<<"insert "<<key<<std::endl;
+  Context ctx;
   WritePageGuard headerwg = bpm_->FetchPageWrite(header_page_id_);
-  auto headpage = headerwg.As<BPlusTreeHeaderPage>();
-  page_id_t headpageid = headpage->root_page_id_;
-  if (headpageid == INVALID_PAGE_ID) {
-    std::cout<<"insert value into header page"<<std::endl;
+  auto headpage = headerwg.AsMut<BPlusTreeHeaderPage>();
+  ctx.header_page_=std::move(headerwg);
+  if (headpage->root_page_id_ == INVALID_PAGE_ID) {
+    // std::cout<<"insert value into header page"<<std::endl;
     // if current tree is empty, start new tree, update root page id and insert entry
     // get a new page
-    Page *page = bpm_->NewPage(&headpageid);
-    BUSTUB_ASSERT(page, "allocate page error!");
-    WritePageGuard new_wg = {bpm_, page};
-    auto leafpage = new_wg.AsMut<LeafPage>();
-
+    auto alloc_page=bpm_->NewPageGuarded(&headpage->root_page_id_);
+    if (headpage->root_page_id_==INVALID_PAGE_ID) {
+      std::cout<<"allocate head page error"<<std::endl;
+      return false;
+    }
+    auto leafpage=alloc_page.AsMut<LeafPage>();
     // inseat data into leaf page
     leafpage->Init(leaf_max_size_);
     leafpage->InsertValue(key, value, comparator_);
-
-    // change the header
-    auto headpage_change = headerwg.AsMut<BPlusTreeHeaderPage>();
-    headpage_change->root_page_id_ = page->GetPageId();
     return true;
   }
-
   // otherwise insert into leaf page.
   // find the right position to insert the value
-  // std::cout<<"insert into leaf page"<<std::endl;
-  // inseat the kv into the leaf page
-  // find the position
-  std::deque<int> indexes;
-  std::deque<WritePageGuard> writeguards;
-  page_id_t pageid = headpageid;
+  return FindLeafNode(headpage->root_page_id_,key,value,txn,&ctx);
+}
 
-  // find the leaf node
-  while (true) {
-    std::cout<<"find the internal page "<<pageid<<std::endl;
-    WritePageGuard internal_wg = bpm_->FetchPageWrite(pageid);
-    std::cout<<"FetchPageWrite the internal page"<<std::endl;
-    auto internalpage = internal_wg.As<InternalPage>();
-    if (internalpage->GetSize() < internalpage->GetMaxSize()) {
-      headerwg.Drop();
-      while (!writeguards.empty()) {
-        // writeguards.back().Drop();
-        writeguards.pop_front();
-      }
+INDEX_TEMPLATE_ARGUMENTS
+auto BPLUSTREE_TYPE::FindLeafNode(page_id_t page_id, const KeyType &key,const ValueType &value,Transaction *txn, Context *ctx)->bool{
+  WritePageGuard basic_wg = bpm_->FetchPageWrite(page_id);
+  auto basic_page = basic_wg.AsMut<BPlusTreePage>();
+  if (!basic_page->IsLeafPage()) {
+    auto *internal=reinterpret_cast<InternalPage *>(basic_page);
+    auto findval=internal->FindValue(key,comparator_);
+    if (findval.first==INVALID_PAGE_ID) {
+      return false;
     }
-    writeguards.push_back(std::move(internal_wg));
-    if (internalpage->IsLeafPage()) {
-      // find the leafpage to insert val
-      break;
-    }
-    // else, it's the internalpage. continue to find the leaf_node
-    auto findval = internalpage->FindValue(key, comparator_);
-    pageid = findval.first;
-    indexes.push_back(findval.second);
+    ctx->write_set_.push_back(std::move(basic_wg));
+    ctx->indexes_.push_back(findval.second);
+    return FindLeafNode(findval.first, key, value,txn, ctx);
   }
+  //is leaf page
+  std::cout<<"successfully find the leafnode"<<std::endl;
+  page_id_t leafpage_id=basic_wg.PageId();
+  auto *leafpage=reinterpret_cast<LeafPage *>(basic_page);
+  return InsertIntoNode(leafpage, leafpage_id, key, value, txn, ctx);
+}
 
-  // std::cout<<"successfully find the leafnode"<<std::endl;
-
-  // successfully find the leafnode
-  auto &wg = writeguards.back();
-  auto leafpage = wg.As<LeafPage>();
+INDEX_TEMPLATE_ARGUMENTS
+auto BPLUSTREE_TYPE::InsertIntoNode(LeafPage *leafpage,page_id_t leaf_id, const KeyType &key,const ValueType &value,Transaction *txn, Context *ctx)->bool{
   std::pair<int, bool> findval = leafpage->FindValueIndex(key, comparator_);
   if (findval.second) {
     // the key is already in the leafpage
-    headerwg.Drop();
-    while (!writeguards.empty()) {
-      writeguards.pop_front();
-    }
+    std::cout<<"the key is already in the leafpage"<<std::endl;
     return false;
   }
   // !findval.second
   if (leafpage->GetSize() < leafpage->GetMaxSize()) {
     // the page is not full,just insert the page
-    auto leafpage_w = wg.AsMut<LeafPage>();
-    leafpage_w->InsertValueAt(key, value, findval.first);
+    std::cout<<"the page is not full, just insert the page"<<std::endl;
+    leafpage->InsertValueAt(key, value, findval.first);
     return true;
   }
-
   // !findval.second and the leafpage is full
   // get a new page
-  Page *newpage = bpm_->NewPage(&pageid);
-  BUSTUB_ASSERT(newpage, "failed to initialize a new page");
-  WritePageGuard leafpage_write_guard = {bpm_, newpage};
 
-  // split the old page into two parts
-  auto leaf_page_old = wg.AsMut<LeafPage>();
-  auto leaf_page_new = leafpage_write_guard.AsMut<LeafPage>();
-  leaf_page_new->Init(leaf_max_size_);
-  leaf_page_old->MoveHalfTo(leaf_page_new);
-  leaf_page_new->SetNextPageId(leaf_page_old->GetNextPageId());
-  leaf_page_old->SetNextPageId(pageid);
-
-  // insert the value
-  if (findval.first <= leaf_page_old->GetSize()) {
-    leaf_page_old->InsertValueAt(key, value, findval.first);
+  LeafPage *buddy;
+  page_id_t buddy_id=DivideLeafNode(leafpage, &buddy);
+  if (buddy_id==INVALID_PAGE_ID) {
+    return false;
+  }
+  const KeyType &key_to_insert = buddy->KeyAt(0);
+  if (ctx->write_set_.empty()) {
+    // No more parent to insert, this case you should allocate a new page to become root
+    std::cout<<"No more parent to insert, this case you should allocate a new page to become root"<<std::endl;
+    MakeNewRootNode(leaf_id, buddy_id, leafpage->KeyAt(0), key_to_insert, ctx);
   } else {
-    leaf_page_new->InsertValueAt(key, value, findval.first - leaf_page_old->GetSize());
+    std::cout<<"insert into internal node"<<std::endl;
+    InsertKeyToInternalNode(key_to_insert, buddy_id, ctx);
   }
-
-  // after inserting value, we need to find whether the parent node is full.
-  page_id_t last_pageid = wg.PageId();
-  std::pair<KeyType, page_id_t> up = std::make_pair(leaf_page_new->KeyAt(0), pageid);
-  writeguards.pop_back();
-
-  while (!writeguards.empty()) {
-    WritePageGuard wg = std::move(writeguards.back());
-    writeguards.pop_back();
-    last_pageid = wg.PageId();
-    auto internal_page = wg.AsMut<InternalPage>();
-    int index = indexes.back();
-    indexes.pop_back();
-    int internel_page_size = internal_page->GetSize();
-    if (internel_page_size < internal_page->GetMaxSize()) {
-      // if the internel page does not need to split
-      internal_page->InsertValueAt(up.first, up.second, index + 1);
-      return true;
-    }
-
-    // the internel page need to split
-    Page *internal_newpage = bpm_->NewPage(&pageid);
-    BUSTUB_ASSERT(internal_newpage, "failed to initialize a new page");
-    WritePageGuard internal_page_writeguard = {bpm_, internal_newpage};
-    auto internal_page_new = internal_page_writeguard.AsMut<InternalPage>();
-    internal_page_new->Init(internal_max_size_);
-    internal_page->MoveHalfTo(internal_page_new);
-
-    // then deal with the upper node
-    if (index < internal_page->GetSize()) {
-      internal_page->InsertValueAt(up.first, up.second, index + 1);
-    } else {
-      internal_page_new->InsertValueAt(up.first, up.second, index - internal_page->GetSize() + 1);
-    }
-    // does not meet the demand of getminsize
-    if (internal_page_new->GetSize() < internal_page_new->GetMinSize()) {
-      internal_page->MoveBackToFront(internal_page_new);
-    }
-
-    // update the up value
-    up = std::make_pair(internal_page_new->KeyAt(0), pageid);
-  }
-
-  // if it is the header page
-  Page *page = bpm_->NewPage(&pageid);
-  BUSTUB_ASSERT(page, "failed to initialize a new page");
-  WritePageGuard page_writeguard = {bpm_, page};
-  auto page_new = page_writeguard.AsMut<InternalPage>();
-  page_new->SetInitVal(internal_max_size_, last_pageid, up.first, up.second);
-  WritePageGuard header_wg = bpm_->FetchPageWrite(header_page_id_);
-  auto root_page = header_wg.AsMut<BPlusTreeHeaderPage>();
-  root_page->root_page_id_ = page->GetPageId();
   return true;
+}
+
+INDEX_TEMPLATE_ARGUMENTS
+void BPLUSTREE_TYPE::InsertKeyToInternalNode(const KeyType &key, page_id_t value, Context *ctx){
+  WritePageGuard guard=std::move(ctx->write_set_.back());
+  ctx->write_set_.pop_back();
+  int index=ctx->indexes_.back();
+  ctx->indexes_.pop_back();
+  auto *internal_page=guard.AsMut<InternalPage>();
+  int internal_page_size = internal_page->GetSize();
+  if (internal_page_size<internal_page->GetMaxSize()) {
+      // auto findval=internal_page->FindValue(key,comparator_);
+      internal_page->InsertValueAt(key, value, index + 1);
+  }else{
+    page_id_t internal_page_id=guard.PageId();
+    InternalPage *buddy;
+    page_id_t buddy_id=DivideInternalNode(internal_page, &buddy);
+    if (buddy_id==INVALID_PAGE_ID) {
+      return;
+    }
+    if (comparator_(key, buddy->KeyAt(0)) >= 0) {
+      ctx->write_set_.push_back(bpm_->FetchPageWrite(buddy_id));
+      InsertKeyToInternalNode(key, value, ctx);
+    } else {
+      ctx->write_set_.push_back(std::move(guard));
+      InsertKeyToInternalNode(key, value, ctx);
+    }
+    if (internal_page->GetSize() > buddy->GetSize() + 1) {
+      internal_page->MoveBackToFront(buddy);
+    } else if (internal_page->GetSize() + 1 < buddy->GetSize()) {
+      internal_page->MoveFrontToBack(buddy);
+    }
+    const KeyType &key_to_insert = buddy->KeyAt(0);
+    if (ctx->write_set_.empty()) {
+      // No more parent to insert, this case you should allocate a new page to become root
+      MakeNewRootNode(internal_page_id, buddy_id, internal_page->KeyAt(0), key_to_insert, ctx);
+    } else {
+      InsertKeyToInternalNode(key_to_insert, buddy_id, ctx);
+    }
+  }
+}
+
+INDEX_TEMPLATE_ARGUMENTS
+auto BPLUSTREE_TYPE::DivideLeafNode(LeafPage *leaf, LeafPage **buddy) -> page_id_t {
+  page_id_t alloc_page_id = INVALID_PAGE_ID;
+  auto alloc_page = bpm_->NewPageGuarded(&alloc_page_id);
+  *buddy = alloc_page.AsMut<LeafPage>();
+  if (*buddy == nullptr) {
+    return INVALID_PAGE_ID;
+  }
+  (*buddy)->Init(leaf_max_size_);
+  (*buddy)->SetNextPageId(leaf->GetNextPageId());
+  leaf->SetNextPageId(alloc_page_id);
+  int old_size = leaf->GetSize();
+  (*buddy)->SetSize(old_size / 2);
+  leaf->SetSize(old_size - (*buddy)->GetSize());
+  for (int i = 0; i < (*buddy)->GetSize(); i++) {
+    (*buddy)->SetKeyAt(i, leaf->KeyAt(leaf->GetSize() + i));
+    (*buddy)->SetValueAt(i, leaf->ValueAt(leaf->GetSize() + i));
+  }
+  return alloc_page_id;
+}
+
+INDEX_TEMPLATE_ARGUMENTS
+auto BPLUSTREE_TYPE::DivideInternalNode(InternalPage *internalpage, InternalPage **buddy) -> page_id_t {
+  page_id_t alloc_page_id = INVALID_PAGE_ID;
+  auto alloc_page = bpm_->NewPageGuarded(&alloc_page_id);
+  *buddy = alloc_page.AsMut<InternalPage>();
+  if (*buddy == nullptr) {
+    return INVALID_PAGE_ID;
+  }
+  (*buddy)->Init(internal_max_size_);
+  int old_size = internalpage->GetSize();
+  (*buddy)->SetSize(old_size / 2);
+  internalpage->SetSize(old_size - (*buddy)->GetSize());
+  for (int i = 0; i < (*buddy)->GetSize(); i++) {
+    (*buddy)->SetKeyAt(i, internalpage->KeyAt(internalpage->GetSize() + i));
+    (*buddy)->SetValueAt(i, internalpage->ValueAt(internalpage->GetSize() + i));
+  }
+  return alloc_page_id;
+}
+
+INDEX_TEMPLATE_ARGUMENTS
+void BPLUSTREE_TYPE::MakeNewRootNode(page_id_t pg1_id, page_id_t pg2_id, const KeyType &key1, const KeyType &key2,
+                                     Context *ctx) {
+  page_id_t alloc_page_id = INVALID_PAGE_ID;
+  auto alloc_page = bpm_->NewPageGuarded(&alloc_page_id);
+  if (alloc_page_id == INVALID_PAGE_ID) {
+    return;
+  }
+  auto *new_root = alloc_page.AsMut<InternalPage>();
+  new_root->Init(internal_max_size_);
+  new_root->SetSize(2);
+  new_root->SetKeyAt(0, key1);
+  new_root->SetKeyAt(1, key2);
+  new_root->SetValueAt(0, pg1_id);
+  new_root->SetValueAt(1, pg2_id);
+  auto guard = std::move(ctx->header_page_);
+  auto head_page = guard->AsMut<BPlusTreeHeaderPage>();
+  head_page->root_page_id_ = alloc_page_id;
+  std::cout<<"MakeNewRootNode successfully"<<std::endl;
 }
 
 /*****************************************************************************

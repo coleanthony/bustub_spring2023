@@ -172,6 +172,10 @@ class BufferPoolManager {
    */
   auto DeletePage(page_id_t page_id) -> bool;
 
+  //test function
+  void GetAllPincount();
+  void JudgePageOk(page_id_t page_id);
+
  private:
   /** Number of pages in the buffer pool. */
   const size_t pool_size_;
