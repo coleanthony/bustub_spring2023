@@ -1,6 +1,5 @@
 #pragma once
 
-#include "common/macros.h"
 #include "storage/page/page.h"
 
 namespace bustub {
@@ -71,7 +70,6 @@ class BasicPageGuard {
 
   auto GetDataMut() -> char * {
     is_dirty_ = true;
-    // BUSTUB_ASSERT(page_!=nullptr, "page is nullptr");
     return page_->GetData();
   }
 

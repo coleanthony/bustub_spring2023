@@ -55,7 +55,7 @@ class Context {
 
   std::deque<page_id_t> sibling_stack_;
 
-  std::deque<int> indexes_;
+  // std::deque<int> indexes_;
 
   auto IsRootPage(page_id_t page_id) -> bool { return page_id == root_page_id_; }
 };
@@ -79,22 +79,24 @@ class BPlusTree {
   // Insert a key-value pair into this B+ tree.
   auto Insert(const KeyType &key, const ValueType &value, Transaction *txn = nullptr) -> bool;
 
-  //InsertKey find leafnode
-  auto FindLeafNode(page_id_t page_id, const KeyType &key,const ValueType &value,Transaction *txn, Context *ctx)->bool;
+  // InsertKey find leafnode
+  auto FindLeafNode(page_id_t page_id, const KeyType &key, const ValueType &value, Transaction *txn, Context *ctx)
+      -> bool;
 
-  //insert key into node
-  auto InsertIntoNode(LeafPage *leafpage,page_id_t page_id, const KeyType &key,const ValueType &value,Transaction *txn, Context *ctx)->bool;
+  // insert key into node
+  auto InsertIntoNode(LeafPage *leafpage, page_id_t leaf_id, const KeyType &key, const ValueType &value,
+                      Transaction *txn, Context *ctx) -> bool;
 
-  //divide the leafnode
+  // divide the leafnode
   auto DivideLeafNode(LeafPage *leafpage, LeafPage **buddy) -> page_id_t;
 
-  //divide the internalnode
+  // divide the internalnode
   auto DivideInternalNode(InternalPage *internalpage, InternalPage **buddy) -> page_id_t;
 
-  //make newrootnode
-  void MakeNewRootNode(page_id_t pg1_id, page_id_t pg2_id, const KeyType &key1, const KeyType &key2,Context *ctx);
+  // make newrootnode
+  void MakeNewRootNode(page_id_t pg1_id, page_id_t pg2_id, const KeyType &key1, const KeyType &key2, Context *ctx);
 
-  //update internalnode
+  // update internalnode
   void InsertKeyToInternalNode(const KeyType &key, page_id_t value, Context *ctx);
 
   // Remove a key and its value from this B+ tree.
@@ -108,6 +110,11 @@ class BPlusTree {
 
   // Return the value associated with a given key
   auto GetValue(const KeyType &key, std::vector<ValueType> *result, Transaction *txn = nullptr) -> bool;
+
+  auto CompareAndGetPageId(BPlusTreeInternalPage<KeyType, page_id_t, KeyComparator> *internal, const KeyType &key)
+      -> page_id_t;
+
+  void ReplaceParentKey(const KeyType &originKey, const KeyType &replaceKey, page_id_t replacePageId, Context *ctx);
 
   // Return the page id of the root node
   auto GetRootPageId() -> page_id_t;
@@ -166,7 +173,6 @@ class BPlusTree {
   int leaf_max_size_;
   int internal_max_size_;
   page_id_t header_page_id_;
-  std::mutex latch_;
 };
 
 /**

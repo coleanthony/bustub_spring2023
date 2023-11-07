@@ -54,7 +54,7 @@ auto B_PLUS_TREE_INTERNAL_PAGE_TYPE::KeyAt(int index) const -> KeyType { return 
 
 INDEX_TEMPLATE_ARGUMENTS
 void B_PLUS_TREE_INTERNAL_PAGE_TYPE::SetKeyAt(int index, const KeyType &key) {
-  BUSTUB_ASSERT(index >= 0 && index < GetSize(), "index out of range");
+  // BUSTUB_ASSERT(index >= 0 && index < GetSize(), "index out of range");
   array_[index].first = key;
 }
 
@@ -170,7 +170,8 @@ void B_PLUS_TREE_INTERNAL_PAGE_TYPE::RemoveByIndex(int remove_index) {
 }
 
 INDEX_TEMPLATE_ARGUMENTS
-void B_PLUS_TREE_INTERNAL_PAGE_TYPE::StoleFromLeftSibling(BPlusTreeInternalPage<KeyType, ValueType, KeyComparator> *internal) {
+void B_PLUS_TREE_INTERNAL_PAGE_TYPE::StoleFromLeftSibling(
+    BPlusTreeInternalPage<KeyType, ValueType, KeyComparator> *internal) {
   for (int index = internal->GetSize(); index > 0; index--) {
     internal->SetKeyAt(index, internal->KeyAt(index - 1));
     internal->SetValueAt(index, internal->ValueAt(index - 1));
@@ -182,7 +183,8 @@ void B_PLUS_TREE_INTERNAL_PAGE_TYPE::StoleFromLeftSibling(BPlusTreeInternalPage<
 }
 
 INDEX_TEMPLATE_ARGUMENTS
-void B_PLUS_TREE_INTERNAL_PAGE_TYPE::StoleFromRightSibling(BPlusTreeInternalPage<KeyType, ValueType, KeyComparator> *internal) {
+void B_PLUS_TREE_INTERNAL_PAGE_TYPE::StoleFromRightSibling(
+    BPlusTreeInternalPage<KeyType, ValueType, KeyComparator> *internal) {
   internal->SetKeyAt(internal->GetSize(), KeyAt(0));
   internal->SetValueAt(internal->GetSize(), ValueAt(0));
   for (int index = 0; index < GetSize() - 1; index++) {

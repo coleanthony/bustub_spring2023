@@ -18,6 +18,7 @@
 #include "storage/page/b_plus_tree_header_page.h"
 #include "storage/page/b_plus_tree_internal_page.h"
 #include "storage/page/b_plus_tree_leaf_page.h"
+#include "storage/page/page_guard.h"
 
 namespace bustub {
 
@@ -29,10 +30,7 @@ class IndexIterator {
   using LeafPage = BPlusTreeLeafPage<KeyType, ValueType, KeyComparator>;
   using InternalPage = BPlusTreeInternalPage<KeyType, page_id_t, KeyComparator>;
 
-  // you may define your own constructor based on your member variables
-  IndexIterator() = default;
-  IndexIterator(BufferPoolManager *bpm, page_id_t head_page_id);
-  IndexIterator(BufferPoolManager *bpm, page_id_t head_page_id, const KeyType &key, const KeyComparator &comparator);
+  IndexIterator(BufferPoolManager *bpm, ReadPageGuard &&guard, ReadPageGuard &&head, int index = -1);
   ~IndexIterator();  // NOLINT
 
   auto IsEnd() -> bool;
@@ -48,8 +46,10 @@ class IndexIterator {
  private:
   // add your own private member variables here
   BufferPoolManager *bpm_;
-  Page *page_;
-  int index_ = 0;
+  ReadPageGuard guard_;
+  ReadPageGuard head_;
+  int index_;
+  page_id_t page_id_;
 };
 
 }  // namespace bustub

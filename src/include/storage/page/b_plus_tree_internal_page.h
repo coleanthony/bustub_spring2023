@@ -91,7 +91,7 @@ class BPlusTreeInternalPage : public BPlusTreePage {
   void SetInitVal(int max_size, const ValueType &left, const KeyType &mid, const ValueType &right);
   // remove value from current page;
   void RemoveByIndex(int remove_index);
-  
+
   void StoleFromLeftSibling(BPlusTreeInternalPage<KeyType, ValueType, KeyComparator> *internal);
 
   void StoleFromRightSibling(BPlusTreeInternalPage<KeyType, ValueType, KeyComparator> *internal);

@@ -102,7 +102,7 @@ auto BufferPoolManager::FetchPage(page_id_t page_id, [[maybe_unused]] AccessType
 
   // Return nullptr if page_id needs to be fetched from the disk, but all frames are currently in use and not evictable
   // (in another word, pinned).
-  
+
   bool has_free_page = false;
   for (size_t i = 0; i < pool_size_; i++) {
     if (pages_[i].GetPinCount() == 0) {
@@ -113,7 +113,6 @@ auto BufferPoolManager::FetchPage(page_id_t page_id, [[maybe_unused]] AccessType
   if (!has_free_page) {
     return nullptr;
   }
-  
 
   // otherwise, pick a replacement frame from either the free list or the replacer (always find from the free list
   // first)
@@ -141,16 +140,18 @@ auto BufferPoolManager::FetchPage(page_id_t page_id, [[maybe_unused]] AccessType
   disk_manager_->ReadPage(page_id, pages_[frame_id].GetData());
   replacer_->RecordAccess(frame_id);
   replacer_->SetEvictable(frame_id, false);
-  pages_[frame_id].pin_count_ =1;
+  pages_[frame_id].pin_count_ = 1;
 
   return &pages_[frame_id];
 }
 
 auto BufferPoolManager::UnpinPage(page_id_t page_id, bool is_dirty, [[maybe_unused]] AccessType access_type) -> bool {
   std::scoped_lock latch(latch_);
-  if (page_table_.find(page_id) == page_table_.end()) { return false;}
+  if (page_table_.find(page_id) == page_table_.end()) {
+    return false;
+  }
   frame_id_t frame_id = page_table_[page_id];
-  if (pages_[frame_id].GetPinCount()==0) {
+  if (pages_[frame_id].GetPinCount() == 0) {
     return false;
   }
   pages_[frame_id].pin_count_--;
@@ -164,8 +165,12 @@ auto BufferPoolManager::UnpinPage(page_id_t page_id, bool is_dirty, [[maybe_unus
 auto BufferPoolManager::FlushPage(page_id_t page_id) -> bool {
   std::scoped_lock latch(latch_);
   // cannot be INVALID_PAGE_ID
-  if (page_id == INVALID_PAGE_ID) { return false;}
-  if (page_table_.find(page_id) == page_table_.end()) { return false;}
+  if (page_id == INVALID_PAGE_ID) {
+    return false;
+  }
+  if (page_table_.find(page_id) == page_table_.end()) {
+    return false;
+  }
   frame_id_t frame_id = page_table_[page_id];
   disk_manager_->WritePage(page_id, pages_[frame_id].GetData());
   pages_[frame_id].is_dirty_ = false;
@@ -219,21 +224,21 @@ auto BufferPoolManager::FetchPageBasic(page_id_t page_id) -> BasicPageGuard {
 
 auto BufferPoolManager::FetchPageRead(page_id_t page_id) -> ReadPageGuard {
   Page *fetchpage = FetchPage(page_id);
-  if (fetchpage!=nullptr) {
+  if (fetchpage != nullptr) {
     fetchpage->RLatch();
     return {this, fetchpage};
   }
-  return {this,nullptr};
+  return {this, nullptr};
 }
 
 auto BufferPoolManager::FetchPageWrite(page_id_t page_id) -> WritePageGuard {
   Page *fetchpage = FetchPage(page_id);
-  if (fetchpage!=nullptr) {
+  if (fetchpage != nullptr) {
     fetchpage->WLatch();
     return {this, fetchpage};
   }
   // std::cout<<"fetchpagewrite empty page"<<std::endl;
-  return {this,nullptr};
+  return {this, nullptr};
 }
 
 auto BufferPoolManager::NewPageGuarded(page_id_t *page_id) -> BasicPageGuard {
@@ -241,15 +246,15 @@ auto BufferPoolManager::NewPageGuarded(page_id_t *page_id) -> BasicPageGuard {
   return {this, newpage};
 }
 
-void BufferPoolManager::GetAllPincount(){
-  for(size_t i=0;i<pool_size_;i++){
-    std::cout<<pages_[i].GetPinCount()<<std::endl;
+void BufferPoolManager::GetAllPincount() {
+  for (size_t i = 0; i < pool_size_; i++) {
+    std::cout << pages_[i].GetPinCount() << std::endl;
   }
 }
 
-void BufferPoolManager::JudgePageOk(page_id_t page_id){
-  frame_id_t frid=page_table_[page_id];
-  std::cout<<"pageid "<<pages_[frid].GetPageId()<<std::endl;
+void BufferPoolManager::JudgePageOk(page_id_t page_id) {
+  frame_id_t frid = page_table_[page_id];
+  std::cout << "pageid " << pages_[frid].GetPageId() << std::endl;
 }
 
 }  // namespace bustub

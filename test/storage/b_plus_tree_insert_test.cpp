@@ -45,6 +45,8 @@ TEST(BPlusTreeTests, InsertTest1) {
   int64_t value = key & 0xFFFFFFFF;
   rid.Set(static_cast<int32_t>(key), value);
   index_key.SetFromInteger(key);
+
+  std::cout << "tree.insert key" << std::endl;
   tree.Insert(index_key, rid, transaction);
 
   auto root_page_id = tree.GetRootPageId();

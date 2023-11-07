@@ -172,7 +172,9 @@ class BufferPoolManager {
    */
   auto DeletePage(page_id_t page_id) -> bool;
 
-  //test function
+  void ReInitializePage(page_id_t page_id, frame_id_t allocated_id);
+
+  // test function
   void GetAllPincount();
   void JudgePageOk(page_id_t page_id);
 
