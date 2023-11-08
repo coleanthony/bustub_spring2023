@@ -195,6 +195,42 @@ void B_PLUS_TREE_INTERNAL_PAGE_TYPE::StoleFromRightSibling(
   internal->IncreaseSize(1);
 }
 
+INDEX_TEMPLATE_ARGUMENTS
+auto B_PLUS_TREE_INTERNAL_PAGE_TYPE::RemovePage(const KeyType &key, page_id_t removed_page, KeyComparator cmp) -> bool {
+  if (cmp(key, KeyAt(1)) < 0 && removed_page == ValueAt(0)) {
+    // we need to remove page zero
+    for (int index = 0; index < GetSize() - 1; index++) {
+      array_[index] = std::move(array_[index + 1]);
+    }
+    IncreaseSize(-1);
+  } else {
+    int index = 1;
+    for (; index < GetSize(); index++) {
+      if (cmp(key, KeyAt(index)) == 0 && ValueAt(index) == removed_page) {
+        break;
+      }
+    }
+    for (; index < GetSize() - 1; index++) {
+      array_[index] = std::move(array_[index + 1]);
+    }
+    IncreaseSize(-1);
+  }
+  return true;
+}
+
+INDEX_TEMPLATE_ARGUMENTS
+void B_PLUS_TREE_INTERNAL_PAGE_TYPE::CombieWithRightSibling(
+    BPlusTreeInternalPage<KeyType, ValueType, KeyComparator> *right_sibling) {
+  SetKeyAt(GetSize(), right_sibling->KeyAt(0));
+  SetValueAt(GetSize(), right_sibling->ValueAt(0));
+  for (int i = 1; i < right_sibling->GetSize(); i++) {
+    SetKeyAt(GetSize() + i, right_sibling->KeyAt(i));
+    SetValueAt(GetSize() + i, right_sibling->ValueAt(i));
+  }
+  SetSize(GetSize() + right_sibling->GetSize());
+  right_sibling->SetSize(0);
+}
+
 // valuetype for internalNode should be page id_t
 template class BPlusTreeInternalPage<GenericKey<4>, page_id_t, GenericComparator<4>>;
 template class BPlusTreeInternalPage<GenericKey<8>, page_id_t, GenericComparator<8>>;

@@ -116,6 +116,16 @@ class BPlusTree {
 
   void ReplaceParentKey(const KeyType &originKey, const KeyType &replaceKey, page_id_t replacePageId, Context *ctx);
 
+  void RemoveTrack(page_id_t page_id, const KeyType &key, Transaction *txn, Context *ctx);
+
+  auto TrackDeletePage(WritePageGuard guard, const KeyType &key, Context *ctx) -> page_id_t;
+
+  void RemoveLeafNode(const KeyType &key, Transaction *txn, Context *ctx);
+
+  auto CalculateMinTolerantSize(BPlusTreePage *page) -> int;
+
+  void RemoveKeyFromParent(const KeyType &key, Context *ctx, page_id_t removed_id);
+
   // Return the page id of the root node
   auto GetRootPageId() -> page_id_t;
 

@@ -182,9 +182,9 @@ $ make check-tests
 | Lecture #10 | Sorting & Aggregations Algorithms                  |     √     |
 | Lecture #11 | Joins Algorithms                                   |     √     |
 | Lecture #12 | Query Execution I                                  |     √     |
-| Lecture #13 | Query Execution II                                 |           |
-| Lecture #14 | Query Planning & Optimization                      |           |
-| Lecture #15 | Concurrency Control Theory                         |           |
+| Lecture #13 | Query Execution II                                 |     √     |
+| Lecture #14 | Query Planning & Optimization                      |     √     |
+| Lecture #15 | Concurrency Control Theory                         |     √     |
 | Lecture #16 | Two-Phase Locking Concurrency Control              |           |
 | Lecture #17 | Timestamp Ordering Concurrency Control             |           |
 | Lecture #18 | Multi-Version Concurrency Control                  |           |
@@ -202,6 +202,6 @@ $ make check-tests
 | ---------- | ------------------------------| --------- |
 | Project #0 | C++ Primer                    |     √     |
 | Project #1 | Buffer Pool Manager           |     √     |
-| Project #2 | B+Tree Index                  |           |
+| Project #2 | B+Tree Index                  |     √     |
 | Project #3 | Query Execution               |           |
 | Project #4 | Concurrency Control           |           |

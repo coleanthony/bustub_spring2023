@@ -96,6 +96,9 @@ class BPlusTreeInternalPage : public BPlusTreePage {
 
   void StoleFromRightSibling(BPlusTreeInternalPage<KeyType, ValueType, KeyComparator> *internal);
 
+  auto RemovePage(const KeyType &key, page_id_t removed_page, KeyComparator cmp) -> bool;
+  void CombieWithRightSibling(BPlusTreeInternalPage<KeyType, ValueType, KeyComparator> *right_sibling);
+
   /**
    * @brief For test only, return a string representing all keys in
    * this internal page, formatted as "(key1,key2,key3,...)"

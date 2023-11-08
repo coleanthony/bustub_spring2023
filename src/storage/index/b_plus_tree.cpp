@@ -1,6 +1,7 @@
 #include <deque>
 #include <iostream>
 #include <ostream>
+#include <random>
 #include <sstream>
 #include <string>
 #include <utility>
@@ -387,6 +388,7 @@ void BPLUSTREE_TYPE::ReplaceParentKey(const KeyType &originKey, const KeyType &r
 // the first version of remove
 // remove, borrow, merge
 
+/*
 INDEX_TEMPLATE_ARGUMENTS
 void BPLUSTREE_TYPE::Remove(const KeyType &key, Transaction *txn) {
   // Declaration of context instance.
@@ -603,6 +605,386 @@ void BPLUSTREE_TYPE::Merge(WritePageGuard &parent_wg, WritePageGuard &child_wg, 
   }
   // whether we need to delete the page?
   parent_page->RemoveByIndex(r);
+}
+*/
+
+// second version of delete
+
+INDEX_TEMPLATE_ARGUMENTS
+void BPLUSTREE_TYPE::Remove(const KeyType &key, Transaction *txn) {
+  // Declaration of context instance.
+  Context ctx;
+  WritePageGuard headerwg = bpm_->FetchPageWrite(header_page_id_);
+  auto headpage = headerwg.As<BPlusTreeHeaderPage>();
+  page_id_t headpageid = headpage->root_page_id_;
+  ctx.header_page_ = std::move(headerwg);
+  if (headpageid == INVALID_PAGE_ID) {
+    // the b+tree is empty
+    return;
+  }
+  ctx.sibling_stack_.push_back(INVALID_PAGE_ID);
+  RemoveTrack(headpageid, key, txn, &ctx);
+  (void)ctx;
+}
+
+INDEX_TEMPLATE_ARGUMENTS
+void BPLUSTREE_TYPE::RemoveTrack(page_id_t page_id, const KeyType &key, Transaction *txn, Context *ctx) {
+  page_id_t leafpageid = TrackDeletePage(bpm_->FetchPageWrite(page_id), key, ctx);
+  if (leafpageid == INVALID_PAGE_ID) {
+    return;
+  }
+  RemoveLeafNode(key, txn, ctx);
+}
+
+INDEX_TEMPLATE_ARGUMENTS
+auto BPLUSTREE_TYPE::TrackDeletePage(WritePageGuard guard, const KeyType &key, Context *ctx) -> page_id_t {
+  auto *tree_page = guard.AsMut<BPlusTreePage>();
+  if (tree_page->IsLeafPage()) {
+    page_id_t page_id = guard.PageId();
+    ctx->write_set_.push_back(std::move(guard));
+    return page_id;
+  }
+  auto *internal_page = guard.AsMut<InternalPage>();
+  int target_index = -1;
+  if (internal_page->GetSize() == 1) {
+    target_index = 0;
+    ctx->sibling_stack_.push_back(INVALID_PAGE_ID);
+  } else if (comparator_(key, internal_page->KeyAt(1)) < 0) {
+    target_index = 0;
+    ctx->sibling_stack_.push_back(internal_page->ValueAt(1));
+  } else {
+    int index = 1;
+    for (; index < internal_page->GetSize() - 1; index++) {
+      if (comparator_(key, internal_page->KeyAt(index + 1)) < 0) {
+        break;
+      }
+    }
+    target_index = index;
+    ctx->sibling_stack_.push_back(internal_page->ValueAt(index - 1));
+  }
+  page_id_t next_page_id = internal_page->ValueAt(target_index);
+  if (next_page_id == INVALID_PAGE_ID) {
+    return INVALID_PAGE_ID;
+  }
+  ctx->write_set_.push_back(std::move(guard));
+  return TrackDeletePage(bpm_->FetchPageWrite(next_page_id), key, ctx);
+}
+
+/*
+INDEX_TEMPLATE_ARGUMENTS
+void BPLUSTREE_TYPE::RemoveLeafNode(const KeyType &key, Transaction *txn, Context *ctx) {
+  WritePageGuard guard = std::move(ctx->write_set_.back());
+  auto *leafpage = guard.AsMut<LeafPage>();
+  ctx->write_set_.pop_back();
+
+  // do not need to borrow
+  if (ctx->write_set_.empty() || leafpage->GetSize() > CalculateMinTolerantSize(leafpage)) {
+    bool replace_flag = false;
+    replace_flag = comparator_(key, leafpage->KeyAt(0)) == 0;
+    // use delectkeyfromnode
+    // auto finddel = leafpage->FindValueIndex(key, comparator_);
+    if (leafpage->DeleteKeyFromNode(key, comparator_)) {
+      if (!ctx->write_set_.empty() && replace_flag) {
+        ReplaceParentKey(key, leafpage->KeyAt(0), guard.PageId(), ctx);
+      }
+    }
+    return;
+  }
+
+  // need to borrow from sibling
+  page_id_t sibling_id = ctx->sibling_stack_.back();
+  ctx->sibling_stack_.pop_back();
+  WritePageGuard sibling_wg = bpm_->FetchPageWrite(sibling_id);
+  auto *sibling = sibling_wg.AsMut<LeafPage>();
+  bool replace_flag = comparator_(key, leafpage->KeyAt(0)) == 0;
+  if (comparator_(sibling->KeyAt(0), leafpage->KeyAt(0)) < 0) {
+    // borrow from left
+    if (sibling->GetSize() > CalculateMinTolerantSize(sibling)) {
+      // just borrow
+      const KeyType &oldkey = leafpage->KeyAt(0);
+      // use delectkeyfromnode
+
+      // auto finddel = leafpage->FindValueIndex(key, comparator_);
+      // if (!finddel.second) {
+      //  return;
+      //}
+      // leafpage->RemoveByIndex(finddel.first);
+
+      if (!leafpage->DeleteKeyFromNode(key, comparator_)) {
+        return;
+      }
+      sibling->MoveBackToFront(leafpage);
+      ReplaceParentKey(oldkey, leafpage->KeyAt(0), guard.PageId(), ctx);
+    } else {
+      // need to merge
+      const KeyType &oldkey = leafpage->KeyAt(0);
+
+      // auto finddel = leafpage->FindValueIndex(key, comparator_);
+      // if (!finddel.second) {
+      //  return;
+      //}
+      // leafpage->RemoveByIndex(finddel.first);
+
+      if (!leafpage->DeleteKeyFromNode(key, comparator_)) {
+        return;
+      }
+      leafpage->MoveAllTo(sibling);
+      sibling->SetNextPageId(leafpage->GetNextPageId());
+      if (ctx->write_set_.size() == 1) {
+        WritePageGuard parentguard = std::move(ctx->write_set_.back());
+        ctx->write_set_.pop_back();
+        auto *parent = parentguard.AsMut<InternalPage>();
+        if (parent->GetSize() == 2) {
+          // BUSTUB_ASSERT(ctx->header_page_, "header page is nullptr");
+          WritePageGuard root_guard = std::move(ctx->header_page_.value());
+          root_guard.AsMut<BPlusTreeHeaderPage>()->root_page_id_ = sibling_wg.PageId();
+          return;
+        }
+        ctx->write_set_.push_back(std::move(parentguard));
+      }
+      RemoveKeyFromParent(oldkey, ctx, guard.PageId());
+    }
+  } else {
+    // borrow from right
+    if (sibling->GetSize() > CalculateMinTolerantSize(sibling)) {
+      // just borrow
+      const KeyType &oldkey = leafpage->KeyAt(0);
+      const KeyType &old_sibling_key = sibling->KeyAt(0);
+
+      // auto finddel = leafpage->FindValueIndex(key, comparator_);
+      // if (!finddel.second) {
+      //  return;
+      //}
+      // leafpage->RemoveByIndex(finddel.first);
+      if (!leafpage->DeleteKeyFromNode(key, comparator_)) {
+        return;
+      }
+      sibling->MoveFrontToBack(leafpage);
+      if (replace_flag) {
+        ReplaceParentKey(oldkey, leafpage->KeyAt(0), guard.PageId(), ctx);
+      }
+      ReplaceParentKey(old_sibling_key, sibling->KeyAt(0), sibling_wg.PageId(), ctx);
+    } else {
+      // need to merge
+      const KeyType &oldkey = leafpage->KeyAt(0);
+
+      // auto finddel = leafpage->FindValueIndex(key, comparator_);
+      // if (!finddel.second) {
+      //  return;
+      //}
+      // leafpage->RemoveByIndex(finddel.first);
+      if (!leafpage->DeleteKeyFromNode(key, comparator_)) {
+        return;
+      }
+      sibling->MoveAllTo(leafpage);
+      leafpage->SetNextPageId(sibling->GetNextPageId());
+      if (ctx->write_set_.size() == 1) {
+        WritePageGuard parentguard = std::move(ctx->write_set_.back());
+        ctx->write_set_.pop_back();
+        auto *parent = parentguard.AsMut<InternalPage>();
+        if (parent->GetSize() == 2) {
+          // BUSTUB_ASSERT(ctx->header_page_, "header page is nullptr");
+          WritePageGuard root_guard = std::move(ctx->header_page_.value());
+          root_guard.AsMut<BPlusTreeHeaderPage>()->root_page_id_ = guard.PageId();
+          return;
+        }
+        ctx->write_set_.push_back(std::move(parentguard));
+      }
+      if (replace_flag) {
+        ReplaceParentKey(key, leafpage->KeyAt(0), guard.PageId(), ctx);
+      }
+      RemoveKeyFromParent(oldkey, ctx, sibling_wg.PageId());
+    }
+  }
+}*/
+
+INDEX_TEMPLATE_ARGUMENTS
+void BPLUSTREE_TYPE::RemoveKeyFromParent(const KeyType &key, Context *ctx, page_id_t removed_id) {
+  if (ctx->write_set_.empty()) {
+    return;
+  }
+  WritePageGuard guard = std::move(ctx->write_set_.back());
+  auto *internalpage = guard.AsMut<InternalPage>();
+  ctx->write_set_.pop_back();
+  page_id_t sibling_page_id = ctx->sibling_stack_.back();
+  ctx->sibling_stack_.pop_back();
+
+  // do not need to borrow
+  if (sibling_page_id == INVALID_PAGE_ID || internalpage->GetSize() > CalculateMinTolerantSize(internalpage)) {
+    if (comparator_(key, internalpage->KeyAt(0)) == 0) {
+      KeyType oldkey = internalpage->KeyAt(0);
+      if (internalpage->RemovePage(key, removed_id, comparator_)) {
+        ReplaceParentKey(oldkey, internalpage->KeyAt(0), guard.PageId(), ctx);
+      }
+    } else {
+      internalpage->RemovePage(key, removed_id, comparator_);
+    }
+    return;
+  }
+
+  // need to borrow from sibling
+  WritePageGuard sibling = bpm_->FetchPageWrite(sibling_page_id);
+  auto *buddy = sibling.AsMut<InternalPage>();
+  bool replace_flag = comparator_(key, internalpage->KeyAt(0)) == 0;
+  if (comparator_(internalpage->KeyAt(0), buddy->KeyAt(0)) > 0) {
+    // left sibling
+    if (buddy->GetSize() > CalculateMinTolerantSize(buddy)) {
+      // just borrow
+      const KeyType &originkey = internalpage->KeyAt(0);
+      internalpage->RemovePage(key, removed_id, comparator_);
+      buddy->MoveBackToFront(internalpage);
+      ReplaceParentKey(originkey, internalpage->KeyAt(0), guard.PageId(), ctx);
+    } else {
+      // need to merge
+      const KeyType &oldkey = internalpage->KeyAt(0);
+      internalpage->RemovePage(key, removed_id, comparator_);
+      internalpage->MoveAllTo(buddy);
+      if (ctx->write_set_.size() == 1) {
+        WritePageGuard parentguard = std::move(ctx->write_set_.back());
+        ctx->write_set_.pop_back();
+        auto *parent = parentguard.AsMut<InternalPage>();
+        if (parent->GetSize() == 2) {
+          // BUSTUB_ASSERT(ctx->header_page_, "header page is nullptr");
+          WritePageGuard root_guard = std::move(ctx->header_page_.value());
+          root_guard.AsMut<BPlusTreeHeaderPage>()->root_page_id_ = sibling.PageId();
+          return;
+        }
+        ctx->write_set_.push_back(std::move(parentguard));
+      }
+      RemoveKeyFromParent(oldkey, ctx, guard.PageId());
+    }
+  } else {
+    // right sibling
+    if (buddy->GetSize() > CalculateMinTolerantSize(buddy)) {
+      // just borrow
+      const KeyType &originkey = internalpage->KeyAt(0);
+      const KeyType &leaf_key = buddy->KeyAt(0);
+      internalpage->RemovePage(key, removed_id, comparator_);
+      buddy->MoveFrontToBack(internalpage);
+      if (replace_flag) {
+        ReplaceParentKey(originkey, internalpage->KeyAt(0), guard.PageId(), ctx);
+      }
+      ReplaceParentKey(leaf_key, buddy->KeyAt(0), sibling.PageId(), ctx);
+    } else {
+      // need to merge
+      const KeyType &originkey = internalpage->KeyAt(0);
+      const KeyType &leaf_key = buddy->KeyAt(0);
+      internalpage->RemovePage(key, removed_id, comparator_);
+      buddy->MoveAllTo(internalpage);
+      if (replace_flag) {
+        ReplaceParentKey(originkey, internalpage->KeyAt(0), guard.PageId(), ctx);
+      }
+      if (ctx->write_set_.size() == 1) {
+        WritePageGuard parentguard = std::move(ctx->write_set_.back());
+        ctx->write_set_.pop_back();
+        auto *parent = parentguard.AsMut<InternalPage>();
+        if (parent->GetSize() == 2) {
+          // BUSTUB_ASSERT(ctx->header_page_, "header page is nullptr");
+          WritePageGuard root_guard = std::move(ctx->header_page_.value());
+          root_guard.AsMut<BPlusTreeHeaderPage>()->root_page_id_ = guard.PageId();
+          return;
+        }
+        ctx->write_set_.push_back(std::move(parentguard));
+      }
+      RemoveKeyFromParent(leaf_key, ctx, sibling.PageId());
+    }
+  }
+}
+
+INDEX_TEMPLATE_ARGUMENTS
+void BPLUSTREE_TYPE::RemoveLeafNode(const KeyType &key, Transaction *txn, Context *ctx) {
+  WritePageGuard guard = std::move(ctx->write_set_.back());
+  ctx->write_set_.pop_back();
+  auto *leaf = guard.AsMut<BPlusTreeLeafPage<KeyType, ValueType, KeyComparator>>();
+  if (ctx->write_set_.empty() || leaf->GetSize() > CalculateMinTolerantSize(leaf)) {
+    bool replace_flag = false;
+    replace_flag = comparator_(key, leaf->KeyAt(0)) == 0;
+    if (leaf->DeleteKeyFromNode(key, comparator_)) {
+      if (!ctx->write_set_.empty() && replace_flag) {
+        ReplaceParentKey(key, leaf->KeyAt(0), guard.PageId(), ctx);
+      }
+    }
+    return;
+  }
+  page_id_t sibling_id = ctx->sibling_stack_.back();
+  ctx->sibling_stack_.pop_back();
+  WritePageGuard sibling_guard = bpm_->FetchPageWrite(sibling_id);
+  auto *sibling = sibling_guard.AsMut<BPlusTreeLeafPage<KeyType, ValueType, KeyComparator>>();
+  bool replace_flag = comparator_(key, leaf->KeyAt(0)) == 0;
+  if (comparator_(sibling->KeyAt(0), leaf->KeyAt(0)) < 0) {
+    // Left sibling case
+    if (sibling->GetSize() > CalculateMinTolerantSize(sibling)) {
+      const KeyType &old_key = leaf->KeyAt(0);
+      if (!leaf->DeleteKeyFromNode(key, comparator_)) {
+        return;
+      }
+      sibling->StoleLastElement(leaf);
+      ReplaceParentKey(old_key, leaf->KeyAt(0), guard.PageId(), ctx);
+    } else {
+      const KeyType &old_key = leaf->KeyAt(0);
+      if (!leaf->DeleteKeyFromNode(key, comparator_)) {
+        return;
+      }
+      sibling->CombineWithRightSibling(leaf);
+      if (ctx->write_set_.size() == 1) {
+        WritePageGuard parent_guard = std::move(ctx->write_set_.back());
+        ctx->write_set_.pop_back();
+        auto *parent = parent_guard.AsMut<BPlusTreeInternalPage<KeyType, page_id_t, KeyComparator>>();
+        if (parent->GetSize() == 2) {
+          WritePageGuard root_guard = std::move(ctx->header_page_.value());
+          root_guard.AsMut<BPlusTreeHeaderPage>()->root_page_id_ = sibling_guard.PageId();
+          return;
+        }
+        ctx->write_set_.push_back(std::move(parent_guard));
+      }
+      RemoveKeyFromParent(old_key, ctx, guard.PageId());
+    }
+  } else {
+    if (sibling->GetSize() > CalculateMinTolerantSize(sibling)) {
+      const KeyType &old_key = leaf->KeyAt(0);
+      const KeyType &sibling_old_key = sibling->KeyAt(0);
+      if (!leaf->DeleteKeyFromNode(key, comparator_)) {
+        return;
+      }
+      sibling->StoleFirstElement(leaf);
+      if (replace_flag) {
+        ReplaceParentKey(old_key, leaf->KeyAt(0), guard.PageId(), ctx);
+      }
+      ReplaceParentKey(sibling_old_key, sibling->KeyAt(0), sibling_guard.PageId(), ctx);
+    } else {
+      const KeyType &old_key = sibling->KeyAt(0);
+      if (!leaf->DeleteKeyFromNode(key, comparator_)) {
+        return;
+      }
+      leaf->CombineWithRightSibling(sibling);
+      if (ctx->write_set_.size() == 1) {
+        WritePageGuard parent_guard = std::move(ctx->write_set_.back());
+        ctx->write_set_.pop_back();
+        auto *parent = parent_guard.AsMut<BPlusTreeInternalPage<KeyType, page_id_t, KeyComparator>>();
+        if (parent->GetSize() == 2) {
+          WritePageGuard root_guard = std::move(ctx->header_page_.value());
+          root_guard.AsMut<BPlusTreeHeaderPage>()->root_page_id_ = guard.PageId();
+          return;
+        }
+        ctx->write_set_.push_back(std::move(parent_guard));
+      }
+      if (replace_flag) {
+        ReplaceParentKey(key, leaf->KeyAt(0), guard.PageId(), ctx);
+      }
+      RemoveKeyFromParent(old_key, ctx, sibling_guard.PageId());
+    }
+  }
+}
+
+INDEX_TEMPLATE_ARGUMENTS
+auto BPLUSTREE_TYPE::CalculateMinTolerantSize(BPlusTreePage *page) -> int {
+  if (page->IsLeafPage()) {
+    auto *leaf = reinterpret_cast<LeafPage *>(page);
+    int size = leaf->GetMaxSize() & 1 ? leaf->GetMaxSize() / 2 + 1 : leaf->GetMaxSize() / 2;
+    return std::max(size - 1, 1);
+  }
+  auto *internal = reinterpret_cast<InternalPage *>(page);
+  return internal->GetMaxSize() & 1 ? internal->GetMaxSize() / 2 + 1 : internal->GetMaxSize() / 2;
 }
 
 /*****************************************************************************

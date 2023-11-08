@@ -84,6 +84,11 @@ class BPlusTreeLeafPage : public BPlusTreePage {
   // move the frontdata to the back of the newpage
   void MoveFrontToBack(BPlusTreeLeafPage *newpage);
 
+  auto DeleteKeyFromNode(const KeyType &key, KeyComparator cmp) -> bool;
+  void StoleLastElement(BPlusTreeLeafPage<KeyType, ValueType, KeyComparator> *thief);
+  void StoleFirstElement(BPlusTreeLeafPage<KeyType, ValueType, KeyComparator> *thief);
+  void CombineWithRightSibling(BPlusTreeLeafPage<KeyType, ValueType, KeyComparator> *right_sibling);
+
   /**
    * @brief for test only return a string representing all keys in
    * this leaf page formatted as "(key1,key2,key3,...)"

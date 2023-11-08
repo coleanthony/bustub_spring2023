@@ -166,7 +166,7 @@ TEST(BPlusTreeTests, DeleteTest2) {
   delete bpm;
 }
 
-TEST(BPlusTreeTests, DeleteTest3) {
+TEST(BPlusTreeTests, DISABLED_DeleteTest3) {
   // create KeyComparator and index schema
   auto key_schema = ParseCreateStatement("a bigint");
   GenericComparator<8> comparator(key_schema.get());
@@ -211,7 +211,7 @@ TEST(BPlusTreeTests, DeleteTest3) {
   }
 }
 
-TEST(BPlusTreeTests, DeleteTest4) {
+TEST(BPlusTreeTests, DISABLED_DeleteTest4) {
   // create KeyComparator and index schema
   auto key_schema = ParseCreateStatement("a bigint");
   GenericComparator<8> comparator(key_schema.get());

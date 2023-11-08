@@ -209,6 +209,62 @@ void B_PLUS_TREE_LEAF_PAGE_TYPE::MoveFrontToBack(BPlusTreeLeafPage *newpage) {
   this->IncreaseSize(-1);
 }
 
+INDEX_TEMPLATE_ARGUMENTS
+auto B_PLUS_TREE_LEAF_PAGE_TYPE::DeleteKeyFromNode(const KeyType &key, KeyComparator cmp) -> bool {
+  int index = -1;
+  for (int i = 0; i < GetSize(); i++) {
+    if (cmp(key, KeyAt(i)) == 0) {
+      index = i;
+    }
+  }
+  if (index == -1) {
+    return false;
+  }
+  while (index < GetSize() - 1) {
+    SetKeyAt(index, KeyAt(index + 1));
+    SetValueAt(index, ValueAt(index + 1));
+    index++;
+  }
+  SetSize(GetSize() - 1);
+  return true;
+}
+
+INDEX_TEMPLATE_ARGUMENTS
+void B_PLUS_TREE_LEAF_PAGE_TYPE::StoleLastElement(BPlusTreeLeafPage<KeyType, ValueType, KeyComparator> *thief) {
+  for (int index = thief->GetSize(); index > 0; index--) {
+    thief->SetKeyAt(index, thief->KeyAt(index - 1));
+    thief->SetValueAt(index, thief->ValueAt(index - 1));
+  }
+  thief->SetKeyAt(0, KeyAt(GetSize() - 1));
+  thief->SetValueAt(0, ValueAt(GetSize() - 1));
+  SetSize(GetSize() - 1);
+  thief->SetSize(thief->GetSize() + 1);
+}
+
+INDEX_TEMPLATE_ARGUMENTS
+void B_PLUS_TREE_LEAF_PAGE_TYPE::StoleFirstElement(BPlusTreeLeafPage<KeyType, ValueType, KeyComparator> *thief) {
+  thief->SetKeyAt(thief->GetSize(), KeyAt(0));
+  thief->SetValueAt(thief->GetSize(), ValueAt(0));
+  for (int index = 0; index < GetSize() - 1; index++) {
+    SetKeyAt(index, KeyAt(index + 1));
+    SetValueAt(index, ValueAt(index + 1));
+  }
+  SetSize(GetSize() - 1);
+  thief->SetSize(thief->GetSize() + 1);
+}
+
+INDEX_TEMPLATE_ARGUMENTS
+void B_PLUS_TREE_LEAF_PAGE_TYPE::CombineWithRightSibling(
+    BPlusTreeLeafPage<KeyType, ValueType, KeyComparator> *right_sibling) {
+  for (int index = 0; index < right_sibling->GetSize(); index++) {
+    SetKeyAt(GetSize() + index, right_sibling->KeyAt(index));
+    SetValueAt(GetSize() + index, right_sibling->ValueAt(index));
+  }
+  SetSize(GetSize() + right_sibling->GetSize());
+  right_sibling->SetSize(0);
+  SetNextPageId(right_sibling->GetNextPageId());
+}
+
 template class BPlusTreeLeafPage<GenericKey<4>, RID, GenericComparator<4>>;
 template class BPlusTreeLeafPage<GenericKey<8>, RID, GenericComparator<8>>;
 template class BPlusTreeLeafPage<GenericKey<16>, RID, GenericComparator<16>>;
