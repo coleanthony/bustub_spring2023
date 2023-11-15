@@ -58,10 +58,11 @@ class UpdateExecutor : public AbstractExecutor {
   auto GetOutputSchema() const -> const Schema & override { return plan_->OutputSchema(); }
 
  private:
+  void WriteInsertedResult(int inserted_num, Tuple *result);
   /** The update plan node to be executed */
   const UpdatePlanNode *plan_;
   /** Metadata identifying the table that should be updated */
-  const TableInfo *table_info_;
+  const TableInfo *table_info_{nullptr};
   /** The child executor to obtain value from */
   std::unique_ptr<AbstractExecutor> child_executor_;
   std::vector<IndexInfo *> table_indexes_;
