@@ -10,19 +10,47 @@
 //
 //===----------------------------------------------------------------------===//
 #include <memory>
+#include <stdexcept>
 #include <vector>
 
+#include "common/rid.h"
 #include "execution/executors/aggregation_executor.h"
+#include "storage/table/tuple.h"
 
 namespace bustub {
 
 AggregationExecutor::AggregationExecutor(ExecutorContext *exec_ctx, const AggregationPlanNode *plan,
                                          std::unique_ptr<AbstractExecutor> &&child)
-    : AbstractExecutor(exec_ctx) {}
+    : AbstractExecutor(exec_ctx),
+    plan_(plan),
+    child_(std::move(child)),
+    aht_(plan->GetAggregates(),plan->GetAggregateTypes()),
+    aht_iterator_(aht_.Begin()) {}
 
-void AggregationExecutor::Init() {}
+void AggregationExecutor::Init() {
+    child_->Init();
+    Tuple tuple{};
+    RID rid{};
+    while (child_->Next(&tuple, &rid)) {
+        aht_.InsertCombine(MakeAggregateKey(&tuple), MakeAggregateValue(&tuple));
+    }
+    if (aht_.Begin()==aht_.End()&&plan_->group_bys_.empty()) {
+        aht_.InsertInitCombine();
+    }
+    aht_iterator_=aht_.Begin();
+}
 
-auto AggregationExecutor::Next(Tuple *tuple, RID *rid) -> bool { return false; }
+auto AggregationExecutor::Next(Tuple *tuple, RID *rid) -> bool {
+    if (aht_iterator_==aht_.End()) {
+        return false;
+    }
+    std::vector<Value> values;
+    values.insert(values.end(),aht_iterator_.Key().group_bys_.begin(),aht_iterator_.Key().group_bys_.end());
+    values.insert(values.end(),aht_iterator_.Val().aggregates_.begin(),aht_iterator_.Val().aggregates_.end());
+    *tuple=Tuple(values,&GetOutputSchema());
+    ++aht_iterator_;
+    return true;
+}
 
 auto AggregationExecutor::GetChildExecutor() const -> const AbstractExecutor * { return child_.get(); }
 
