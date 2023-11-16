@@ -11,24 +11,23 @@
 //===----------------------------------------------------------------------===//
 
 #include "execution/executors/seq_scan_executor.h"
+#include <memory>
 #include "storage/table/table_iterator.h"
 
 namespace bustub {
 
-SeqScanExecutor::SeqScanExecutor(ExecutorContext *exec_ctx, const SeqScanPlanNode *plan) : AbstractExecutor(exec_ctx),plan_(plan) {
-    table_info_=exec_ctx->GetCatalog()->GetTable(plan->table_name_);
-}
+SeqScanExecutor::SeqScanExecutor(ExecutorContext *exec_ctx, const SeqScanPlanNode *plan) : 
+AbstractExecutor(exec_ctx),
+plan_(plan) {}
 
 void SeqScanExecutor::Init() { 
-    auto &table=table_info_->table_;
-    table_iter_=new TableIterator(table->MakeIterator());
+    auto table_info=exec_ctx_->GetCatalog()->GetTable(plan_->table_name_);
+    table_iter_=std::make_unique<TableIterator>(table_info->table_->MakeIterator());
 }
 
 auto SeqScanExecutor::Next(Tuple *tuple, RID *rid) -> bool { 
     while (true) {
         if (table_iter_->IsEnd()) {
-            delete table_iter_;
-            table_iter_=nullptr;
             return false;
         }
         if (table_iter_->GetTuple().first.is_deleted_) {
