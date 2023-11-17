@@ -35,6 +35,7 @@ auto TopNCheckExecutor::Next(Tuple *tuple, RID *rid) -> bool {
   if (!child_executor_) {
     return EXECUTOR_EXHAUSTED;
   }
+  // std::cout<<"prev:"<<prev_<<" topn_executor_->GetNumInHeap():"<<topn_executor_->GetNumInHeap()<<" plan_->GetN():"<<plan_->GetN()<<std::endl;
 
   BUSTUB_ASSERT(topn_executor_->GetNumInHeap() <= plan_->GetN(), "Cannot store more than N elements");
   if (prev_ > 0 && prev_ < plan_->GetN()) {

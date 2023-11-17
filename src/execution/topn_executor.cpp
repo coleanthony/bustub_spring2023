@@ -38,31 +38,32 @@ void TopNExecutor::Init() {
         return false;
     };
     std::priority_queue<Tuple,std::vector<Tuple>,decltype(cmp)> pq{cmp};
-    auto topn=plan_->GetN();
     while (child_executor_->Next(&tuple, &rid)) {
-        pq.emplace(tuple);
-        if (pq.size()>topn) {
+        pq.push(tuple);
+        if (pq.size()>plan_->GetN()) {
             pq.pop();
         }
     }
+    //std::cout<<"pq.size():"<<pq.size()<<std::endl;
     while (!pq.empty()) {
-        tupleres_.push_back(pq.top());
+        tupleres_.push_front(pq.top());
         pq.pop();
     }
-    tupleres_iter_=tupleres_.begin();
+    //std::cout<<"tupleres_.size():"<<tupleres_.size()<<std::endl;
 }
 
 auto TopNExecutor::Next(Tuple *tuple, RID *rid) -> bool {
-    if (tupleres_iter_==tupleres_.end()) {
+    if (tupleres_.empty()) {
         return false;
     }
-    *tuple=*tupleres_iter_;
+    *tuple=tupleres_.front();
     *rid=tuple->GetRid();
-    ++tupleres_iter_;
+    tupleres_.pop_front();
     return true;
 }
 
 auto TopNExecutor::GetNumInHeap() -> size_t {
+    //std::cout<<"tupleres_.size():"<<tupleres_.size()<<std::endl;
     return tupleres_.size();
 };
 

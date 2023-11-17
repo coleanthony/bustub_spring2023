@@ -105,6 +105,7 @@ void HashJoinExecutor::Init() {
       tupleres_.emplace_back(values,&GetOutputSchema());
     }
   }
+  std::cout<<tupleres_.size()<<std::endl;
   tupleres_iter_=tupleres_.begin();
 }
 
