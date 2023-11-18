@@ -76,33 +76,33 @@ class SimpleAggregationHashTable {
     for (uint32_t i = 0; i < agg_exprs_.size(); i++) {
       switch (agg_types_[i]) {
         case AggregationType::CountStarAggregate:
-          result->aggregates_.at(i)=result->aggregates_.at(i).Add(ValueFactory::GetIntegerValue(1));
+          result->aggregates_.at(i) = result->aggregates_.at(i).Add(ValueFactory::GetIntegerValue(1));
           break;
         case AggregationType::CountAggregate:
           if (!input.aggregates_.at(i).IsNull()) {
             if (result->aggregates_.at(i).IsNull()) {
-              result->aggregates_.at(i)=ValueFactory::GetIntegerValue(1);
-            }else{
-              result->aggregates_.at(i)=result->aggregates_.at(i).Add(ValueFactory::GetIntegerValue(1));
+              result->aggregates_.at(i) = ValueFactory::GetIntegerValue(1);
+            } else {
+              result->aggregates_.at(i) = result->aggregates_.at(i).Add(ValueFactory::GetIntegerValue(1));
             }
           }
           break;
         case AggregationType::SumAggregate:
           if (!input.aggregates_.at(i).IsNull()) {
             if (result->aggregates_.at(i).IsNull()) {
-              result->aggregates_.at(i)=input.aggregates_.at(i);
-            }else{
-              result->aggregates_.at(i)=result->aggregates_.at(i).Add(input.aggregates_.at(i));
+              result->aggregates_.at(i) = input.aggregates_.at(i);
+            } else {
+              result->aggregates_.at(i) = result->aggregates_.at(i).Add(input.aggregates_.at(i));
             }
           }
           break;
         case AggregationType::MinAggregate:
           if (!input.aggregates_.at(i).IsNull()) {
             if (result->aggregates_.at(i).IsNull()) {
-              result->aggregates_.at(i)=input.aggregates_.at(i);
-            }else{
-              if(result->aggregates_.at(i).CompareLessThan(input.aggregates_.at(i))==CmpBool::CmpFalse){
-                result->aggregates_.at(i)=input.aggregates_.at(i);
+              result->aggregates_.at(i) = input.aggregates_.at(i);
+            } else {
+              if (result->aggregates_.at(i).CompareLessThan(input.aggregates_.at(i)) == CmpBool::CmpFalse) {
+                result->aggregates_.at(i) = input.aggregates_.at(i);
               }
             }
           }
@@ -110,10 +110,10 @@ class SimpleAggregationHashTable {
         case AggregationType::MaxAggregate:
           if (!input.aggregates_.at(i).IsNull()) {
             if (result->aggregates_.at(i).IsNull()) {
-              result->aggregates_.at(i)=input.aggregates_.at(i);
-            }else{
-              if(result->aggregates_.at(i).CompareGreaterThan(input.aggregates_.at(i))==CmpBool::CmpFalse){
-                result->aggregates_.at(i)=input.aggregates_.at(i);
+              result->aggregates_.at(i) = input.aggregates_.at(i);
+            } else {
+              if (result->aggregates_.at(i).CompareGreaterThan(input.aggregates_.at(i)) == CmpBool::CmpFalse) {
+                result->aggregates_.at(i) = input.aggregates_.at(i);
               }
             }
           }
@@ -134,9 +134,7 @@ class SimpleAggregationHashTable {
     CombineAggregateValues(&ht_[agg_key], agg_val);
   }
 
-  void InsertInitCombine(){
-    ht_.insert({{std::vector<Value>{}},GenerateInitialAggregateValue()});
-  }
+  void InsertInitCombine() { ht_.insert({{std::vector<Value>{}}, GenerateInitialAggregateValue()}); }
 
   /**
    * Clear the hash table

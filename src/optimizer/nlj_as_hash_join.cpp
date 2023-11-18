@@ -34,54 +34,60 @@ auto Optimizer::OptimizeNLJAsHashJoin(const AbstractPlanNodeRef &plan) -> Abstra
   const auto &nlj_plan = dynamic_cast<const NestedLoopJoinPlanNode &>(*optimized_plan);
   BUSTUB_ENSURE(nlj_plan.children_.size() == 2, "NLJ should have exactly 2 children.");
   const auto *expr = dynamic_cast<const ComparisonExpression *>(nlj_plan.Predicate().get());
-  if (expr!=nullptr) {
+  if (expr != nullptr) {
     if (expr->comp_type_ != ComparisonType::Equal) {
       return optimized_plan;
     }
     const auto *left_expr = dynamic_cast<const ColumnValueExpression *>(expr->children_[0].get());
     const auto *right_expr = dynamic_cast<const ColumnValueExpression *>(expr->children_[1].get());
-    if (left_expr==nullptr||right_expr==nullptr) {
+    if (left_expr == nullptr || right_expr == nullptr) {
       return optimized_plan;
     }
-    auto left_expr_tuple_0 = std::make_shared<ColumnValueExpression>(left_expr->GetTupleIdx(), left_expr->GetColIdx(), left_expr->GetReturnType());
-    auto right_expr_tuple_0 = std::make_shared<ColumnValueExpression>(right_expr->GetTupleIdx(), right_expr->GetColIdx(), right_expr->GetReturnType());
-    /** Tuple index 0 = left side of join, tuple index 1 = right side of join */
-    if (left_expr->GetTupleIdx()==0&&right_expr->GetTupleIdx()==1) {
-      return  std::make_shared<HashJoinPlanNode>(nlj_plan.output_schema_,nlj_plan.GetLeftPlan() , nlj_plan.GetRightPlan(),
-                   std::vector<AbstractExpressionRef>{left_expr_tuple_0},
-                   std::vector<AbstractExpressionRef>{right_expr_tuple_0},nlj_plan.GetJoinType());
+    auto left_expr_tuple_0 = std::make_shared<ColumnValueExpression>(left_expr->GetTupleIdx(), left_expr->GetColIdx(),
+                                                                     left_expr->GetReturnType());
+    auto right_expr_tuple_0 = std::make_shared<ColumnValueExpression>(
+        right_expr->GetTupleIdx(), right_expr->GetColIdx(), right_expr->GetReturnType());
+    // Tuple index 0 = left side of join, tuple index 1 = right side of join
+    if (left_expr->GetTupleIdx() == 0 && right_expr->GetTupleIdx() == 1) {
+      return std::make_shared<HashJoinPlanNode>(
+          nlj_plan.output_schema_, nlj_plan.GetLeftPlan(), nlj_plan.GetRightPlan(),
+          std::vector<AbstractExpressionRef>{left_expr_tuple_0}, std::vector<AbstractExpressionRef>{right_expr_tuple_0},
+          nlj_plan.GetJoinType());
     }
-    if (left_expr->GetTupleIdx()==1&&right_expr->GetTupleIdx()==0) {
-      return  std::make_shared<HashJoinPlanNode>(nlj_plan.output_schema_,nlj_plan.GetLeftPlan() , nlj_plan.GetRightPlan(),
-                   std::vector<AbstractExpressionRef>{right_expr_tuple_0},
-                   std::vector<AbstractExpressionRef>{left_expr_tuple_0},nlj_plan.GetJoinType());
+    if (left_expr->GetTupleIdx() == 1 && right_expr->GetTupleIdx() == 0) {
+      return std::make_shared<HashJoinPlanNode>(
+          nlj_plan.output_schema_, nlj_plan.GetLeftPlan(), nlj_plan.GetRightPlan(),
+          std::vector<AbstractExpressionRef>{right_expr_tuple_0}, std::vector<AbstractExpressionRef>{left_expr_tuple_0},
+          nlj_plan.GetJoinType());
     }
     return optimized_plan;
   }
   const auto *logic_expr = dynamic_cast<const LogicExpression *>(nlj_plan.Predicate().get());
-  if (logic_expr!=nullptr) {
-    if (logic_expr->logic_type_!=LogicType::And) {
+  if (logic_expr != nullptr) {
+    if (logic_expr->logic_type_ != LogicType::And) {
       return optimized_plan;
     }
-    const auto *left_expr = dynamic_cast<const ComparisonExpression *>(expr->children_[0].get());
-    const auto *right_expr = dynamic_cast<const ComparisonExpression *>(expr->children_[1].get());
-    if (left_expr==nullptr||right_expr==nullptr) {
+    const auto *left_expr = dynamic_cast<const ComparisonExpression *>(logic_expr->children_[0].get());
+    const auto *right_expr = dynamic_cast<const ComparisonExpression *>(logic_expr->children_[1].get());
+    if (left_expr == nullptr || right_expr == nullptr) {
       return optimized_plan;
     }
     const auto *left_left_expr = dynamic_cast<const ColumnValueExpression *>(left_expr->children_[0].get());
     const auto *left_right_expr = dynamic_cast<const ColumnValueExpression *>(left_expr->children_[1].get());
     const auto *right_left_expr = dynamic_cast<const ColumnValueExpression *>(right_expr->children_[0].get());
     const auto *right_right_expr = dynamic_cast<const ColumnValueExpression *>(right_expr->children_[1].get());
-    if (left_left_expr==nullptr||left_right_expr==nullptr||right_left_expr==nullptr||right_right_expr==nullptr) {
+    if (left_left_expr == nullptr || left_right_expr == nullptr || right_left_expr == nullptr ||
+        right_right_expr == nullptr) {
       return optimized_plan;
     }
     std::vector<AbstractExpressionRef> left_expr_ref{};
     std::vector<AbstractExpressionRef> right_expr_ref{};
-    auto push_value=[&](const ColumnValueExpression* expr){
-      auto expr_tuple=std::make_shared<ColumnValueExpression>(expr->GetTupleIdx(), expr->GetColIdx(), expr->GetReturnType());
-      if (expr->GetTupleIdx()==0) {
+    auto push_value = [&](const ColumnValueExpression *expr) {
+      auto expr_tuple =
+          std::make_shared<ColumnValueExpression>(expr->GetTupleIdx(), expr->GetColIdx(), expr->GetReturnType());
+      if (expr->GetTupleIdx() == 0) {
         left_expr_ref.push_back(expr_tuple);
-      }else{
+      } else {
         right_expr_ref.push_back(expr_tuple);
       }
     };
@@ -89,8 +95,8 @@ auto Optimizer::OptimizeNLJAsHashJoin(const AbstractPlanNodeRef &plan) -> Abstra
     push_value(left_right_expr);
     push_value(right_left_expr);
     push_value(right_right_expr);
-    return  std::make_shared<HashJoinPlanNode>(nlj_plan.output_schema_,nlj_plan.GetLeftPlan() , nlj_plan.GetRightPlan(),
-                   left_expr_ref,right_expr_ref,nlj_plan.GetJoinType());
+    return std::make_shared<HashJoinPlanNode>(nlj_plan.output_schema_, nlj_plan.GetLeftPlan(), nlj_plan.GetRightPlan(),
+                                              left_expr_ref, right_expr_ref, nlj_plan.GetJoinType());
   }
   return optimized_plan;
 }

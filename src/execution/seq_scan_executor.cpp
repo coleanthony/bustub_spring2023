@@ -16,30 +16,29 @@
 
 namespace bustub {
 
-SeqScanExecutor::SeqScanExecutor(ExecutorContext *exec_ctx, const SeqScanPlanNode *plan) : 
-AbstractExecutor(exec_ctx),
-plan_(plan) {}
+SeqScanExecutor::SeqScanExecutor(ExecutorContext *exec_ctx, const SeqScanPlanNode *plan)
+    : AbstractExecutor(exec_ctx), plan_(plan) {}
 
-void SeqScanExecutor::Init() { 
-    auto table_info=exec_ctx_->GetCatalog()->GetTable(plan_->table_name_);
-    table_iter_=std::make_unique<TableIterator>(table_info->table_->MakeIterator());
+void SeqScanExecutor::Init() {
+  auto table_info = exec_ctx_->GetCatalog()->GetTable(plan_->table_name_);
+  table_iter_ = std::make_unique<TableIterator>(table_info->table_->MakeIterator());
 }
 
-auto SeqScanExecutor::Next(Tuple *tuple, RID *rid) -> bool { 
-    while (true) {
-        if (table_iter_->IsEnd()) {
-            return false;
-        }
-        if (table_iter_->GetTuple().first.is_deleted_) {
-            ++(*table_iter_);
-            continue;
-        }
-        *tuple=table_iter_->GetTuple().second;
-        *rid=table_iter_->GetRID();
-        break;
+auto SeqScanExecutor::Next(Tuple *tuple, RID *rid) -> bool {
+  while (true) {
+    if (table_iter_->IsEnd()) {
+      return false;
     }
-    ++(*table_iter_);
-    return true; 
+    if (table_iter_->GetTuple().first.is_deleted_) {
+      ++(*table_iter_);
+      continue;
+    }
+    *tuple = table_iter_->GetTuple().second;
+    *rid = table_iter_->GetRID();
+    break;
+  }
+  ++(*table_iter_);
+  return true;
 }
 
 }  // namespace bustub

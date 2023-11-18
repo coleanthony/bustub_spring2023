@@ -48,6 +48,5 @@ class IndexScanExecutor : public AbstractExecutor {
   IndexInfo *index_info_;
   const TableInfo *table_info_;
   BPlusTreeIndexIteratorForTwoIntegerColumn index_iter_;
-
 };
 }  // namespace bustub

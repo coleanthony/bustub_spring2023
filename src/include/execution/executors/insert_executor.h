@@ -14,6 +14,7 @@
 
 #include <memory>
 #include <utility>
+#include <vector>
 
 #include "concurrency/transaction.h"
 #include "execution/executor_context.h"

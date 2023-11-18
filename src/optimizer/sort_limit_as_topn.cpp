@@ -13,10 +13,11 @@ auto Optimizer::OptimizeSortLimitAsTopN(const AbstractPlanNodeRef &plan) -> Abst
     children.emplace_back(OptimizeSortLimitAsTopN(child));
   }
   auto optimized_plan = plan->CloneWithChildren(std::move(children));
-  if (optimized_plan->GetType()==PlanType::Limit&&optimized_plan->GetChildren()[0]->GetType()==PlanType::Sort) {
-    const auto &limit_plan=dynamic_cast<const LimitPlanNode &>(*optimized_plan);
-    const auto &sort_plan=dynamic_cast<const SortPlanNode &>(*limit_plan.children_[0]);
-    return std::make_shared<TopNPlanNode>(limit_plan.output_schema_,sort_plan.children_[0],sort_plan.GetOrderBy(),limit_plan.GetLimit());
+  if (optimized_plan->GetType() == PlanType::Limit && optimized_plan->GetChildren()[0]->GetType() == PlanType::Sort) {
+    const auto &limit_plan = dynamic_cast<const LimitPlanNode &>(*optimized_plan);
+    const auto &sort_plan = dynamic_cast<const SortPlanNode &>(*limit_plan.children_[0]);
+    return std::make_shared<TopNPlanNode>(limit_plan.output_schema_, sort_plan.children_[0], sort_plan.GetOrderBy(),
+                                          limit_plan.GetLimit());
   }
   return optimized_plan;
 }
