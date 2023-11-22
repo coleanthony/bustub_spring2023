@@ -325,7 +325,9 @@ class LockManager {
   //upgrade lock table
   auto CheckUpgradeLockLevel(LockMode transaction_lock_mode,LockMode lock_mode)->bool;
   //check the txn can successfully get the lock
-  auto GrantLock(std::shared_ptr<LockRequest> &lock_request,std::shared_ptr<LockRequestQueue> &lock_request_queue)->bool;
+  auto GrantLock(const std::shared_ptr<LockRequest> &lock_request,const std::shared_ptr<LockRequestQueue> &lock_request_queue)->bool;
+  //modify table locks
+  void ModifyTableLocks(Transaction *txn,const std::shared_ptr<LockRequest> &lock_request,bool is_insert_mode);
   //upgrade lock table
   auto UpgradeLockTable(Transaction *txn, LockMode lock_mode, const table_oid_t &oid) -> bool;
 

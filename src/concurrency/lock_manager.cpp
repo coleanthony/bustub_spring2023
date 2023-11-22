@@ -58,7 +58,7 @@ auto LockManager::LockTable(Transaction *txn, LockMode lock_mode, const table_oi
         throw TransactionAbortException(txn->GetTransactionId(),AbortReason::INCOMPATIBLE_UPGRADE);
       }
       //upgrade the lock
-
+      
 
 
     }
@@ -71,9 +71,19 @@ auto LockManager::LockTable(Transaction *txn, LockMode lock_mode, const table_oi
   //5.try to get the lock
   std::unique_lock<std::mutex> lock(lock_request_queue->latch_,std::adopt_lock);
   while (!GrantLock(lock_request,lock_request_queue)) {
-  
+    lock_request_queue->cv_.wait(lock);
+    if (txn->GetState()==TransactionState::ABORTED) {
+      lock_request_queue->request_queue_.remove(lock_request.get());
+      lock_request_queue->cv_.notify_all();
+      return false;
+    }
   }
-
+  //can get the lock
+  lock_request->granted_=true;
+  ModifyTableLocks(txn,lock_request,true);
+  if(lock_mode!=LockMode::EXCLUSIVE) {
+    lock_request_queue->cv_.notify_all();
+  }
   return true;
 }
 
@@ -171,8 +181,83 @@ auto LockManager::CheckUpgradeLockLevel(LockMode transaction_lock_mode,LockMode 
   return false;
 }
 
-auto LockManager::GrantLock(std::shared_ptr<LockRequest> &lock_request,std::shared_ptr<LockRequestQueue> &lock_request_queue)->bool{
-  
+auto LockManager::GrantLock(const std::shared_ptr<LockRequest> &lock_request,const std::shared_ptr<LockRequestQueue> &lock_request_queue)->bool{
+  for (const auto &request:lock_request_queue->request_queue_) {
+    if (request->granted_) {
+      //Whether the lock has been granted or not
+      switch (request->lock_mode_) {
+        case LockMode::SHARED:
+          if (lock_request->lock_mode_==LockMode::EXCLUSIVE||lock_request->lock_mode_==LockMode::SHARED_INTENTION_EXCLUSIVE) {
+            break;
+          }
+          return false;
+        case LockMode::EXCLUSIVE:
+          return false;
+        case LockMode::INTENTION_SHARED:
+          if (lock_request->lock_mode_==LockMode::SHARED||lock_request->lock_mode_==LockMode::EXCLUSIVE||lock_request->lock_mode_==LockMode::INTENTION_EXCLUSIVE||lock_request->lock_mode_==LockMode::SHARED_INTENTION_EXCLUSIVE) {
+            break;
+          }
+          return false;
+        case LockMode::INTENTION_EXCLUSIVE:
+          if (lock_request->lock_mode_==LockMode::EXCLUSIVE||lock_request->lock_mode_==LockMode::SHARED_INTENTION_EXCLUSIVE) {
+            break;
+          }
+          return false;
+        case LockMode::SHARED_INTENTION_EXCLUSIVE:
+          if (lock_request->lock_mode_==LockMode::EXCLUSIVE) {
+            break;
+          }
+          return false;
+      }
+    }else{
+      return request==lock_request.get();
+    }
+    return false;
+  }
+  // impossible to get here
+  return false;
+}
+
+void LockManager::ModifyTableLocks(Transaction *txn,const std::shared_ptr<LockRequest> &lock_request,bool is_insert_mode){
+  switch (lock_request->lock_mode_) {
+    case LockMode::SHARED:
+      if (is_insert_mode) {
+        //insert
+        txn->GetSharedTableLockSet()->insert(lock_request->oid_);
+      }else{
+        //delete
+        txn->GetSharedTableLockSet()->erase(lock_request->oid_);
+      }
+      break;
+    case LockMode::EXCLUSIVE:
+      if (is_insert_mode) {
+        txn->GetExclusiveTableLockSet()->insert(lock_request->oid_);
+      }else{
+        txn->GetExclusiveTableLockSet()->erase(lock_request->oid_);
+      }
+      break;
+    case LockMode::INTENTION_SHARED:
+      if (is_insert_mode) {
+        txn->GetIntentionSharedTableLockSet()->insert(lock_request->oid_);
+      }else{
+        txn->GetIntentionSharedTableLockSet()->erase(lock_request->oid_);
+      }
+      break;
+    case LockMode::INTENTION_EXCLUSIVE:
+      if (is_insert_mode) {
+        txn->GetIntentionExclusiveTableLockSet()->insert(lock_request->oid_);
+      }else{
+        txn->GetIntentionExclusiveTableLockSet()->erase(lock_request->oid_);
+      }
+      break;
+    case LockMode::SHARED_INTENTION_EXCLUSIVE:
+      if (is_insert_mode) {
+        txn->GetSharedIntentionExclusiveTableLockSet()->insert(lock_request->oid_);
+      }else{
+        txn->GetSharedIntentionExclusiveTableLockSet()->erase(lock_request->oid_);
+      }
+      break;
+  }
 }
 
 }  // namespace bustub
