@@ -58,9 +58,33 @@ auto LockManager::LockTable(Transaction *txn, LockMode lock_mode, const table_oi
         throw TransactionAbortException(txn->GetTransactionId(),AbortReason::INCOMPATIBLE_UPGRADE);
       }
       //upgrade the lock
-      
+      lock_request_queue->request_queue_.remove(lock_request);
+      ModifyTableLocks(txn, std::shared_ptr<LockRequest>(lock_request), false);
+
+      auto update_request=std::make_shared<LockRequest>(txn->GetTransactionId(), lock_mode, oid);
+      auto iter=lock_request_queue->request_queue_.begin();
 
 
+      lock_request_queue->upgrading_=txn->GetTransactionId();
+
+      std::unique_lock<std::mutex> lock(lock_request_queue->latch_,std::adopt_lock);
+      while (!GrantLock(update_request,lock_request_queue)) {
+        lock_request_queue->cv_.wait(lock);
+        if (txn->GetState()==TransactionState::ABORTED) {
+          lock_request_queue->request_queue_.remove(update_request.get());
+          lock_request_queue->upgrading_=INVALID_TXN_ID;
+          lock_request_queue->cv_.notify_all();
+          return false;
+        }
+      }
+      //can get the lock
+      update_request->granted_=true;
+      lock_request_queue->upgrading_=INVALID_TXN_ID;
+      ModifyTableLocks(txn,update_request,true);
+      if(lock_mode!=LockMode::EXCLUSIVE) {
+        lock_request_queue->cv_.notify_all();
+      }
+      return true;
     }
   }
 
