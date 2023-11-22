@@ -11,14 +11,71 @@
 //===----------------------------------------------------------------------===//
 
 #include "concurrency/lock_manager.h"
+#include <memory>
+#include <mutex>
 
 #include "common/config.h"
+#include "common/exception.h"
 #include "concurrency/transaction.h"
 #include "concurrency/transaction_manager.h"
 
 namespace bustub {
 
-auto LockManager::LockTable(Transaction *txn, LockMode lock_mode, const table_oid_t &oid) -> bool { return true; }
+auto LockManager::LockTable(Transaction *txn, LockMode lock_mode, const table_oid_t &oid) -> bool {
+  //1.we need to check isolation level
+  CheckTransactionLevel(txn, lock_mode);
+
+  //2.get the LockRequestQueue
+  table_lock_map_latch_.lock();
+  if (table_lock_map_.find(oid)==table_lock_map_.end()) {
+    table_lock_map_.emplace(oid,std::make_shared<LockRequestQueue>());
+  }
+  auto table_lock_map_iter=table_lock_map_.find(oid);
+  auto lock_request_queue=table_lock_map_iter->second;
+  table_lock_map_latch_.unlock();
+
+  lock_request_queue->latch_.lock();
+  //3.judge if it is a lock_upgrade operation
+  for (auto lock_request:lock_request_queue->request_queue_) {
+    if (lock_request->txn_id_==txn->GetTransactionId()) {
+      if (lock_request->lock_mode_==lock_mode) {
+        // If requested lock mode is the same as that of the lock presently held, Lock() should return true since it already has the lock.
+        lock_request_queue->latch_.unlock();
+        return true;
+      }
+      //lock mode is different, Lock() should upgrade the lock held by the transaction
+      //Multiple concurrent lock upgrades on the same resource should set the TransactionState as ABORTED and throw a TransactionAbortException (UPGRADE_CONFLICT).
+      if (lock_request_queue->upgrading_!=INVALID_TXN_ID) {
+        txn->SetState(TransactionState::ABORTED);
+        lock_request_queue->latch_.unlock();
+        throw TransactionAbortException(txn->GetTransactionId(),AbortReason::UPGRADE_CONFLICT);
+      }
+
+      if (!CheckUpgradeLockLevel(lock_request->lock_mode_,lock_mode)) {
+        //upgrade is considered incompatible
+        txn->SetState(TransactionState::ABORTED);
+        lock_request_queue->latch_.unlock();
+        throw TransactionAbortException(txn->GetTransactionId(),AbortReason::INCOMPATIBLE_UPGRADE);
+      }
+      //upgrade the lock
+
+
+
+    }
+  }
+
+  //4.not a lock_upgrade operation, put the lock into the new LockRequestQueue
+  auto lock_request=std::make_shared<LockRequest>(txn->GetTransactionId(), lock_mode, oid);
+  lock_request_queue->request_queue_.emplace_back(lock_request);
+  
+  //5.try to get the lock
+  std::unique_lock<std::mutex> lock(lock_request_queue->latch_,std::adopt_lock);
+  while (!GrantLock(lock_request,lock_request_queue)) {
+  
+  }
+
+  return true;
+}
 
 auto LockManager::UnlockTable(Transaction *txn, const table_oid_t &oid) -> bool { return true; }
 
@@ -51,6 +108,71 @@ void LockManager::RunCycleDetection() {
     {  // TODO(students): detect deadlock
     }
   }
+}
+
+void LockManager::CheckTransactionLevel(Transaction *txn, LockMode lock_mode){
+  switch (txn->GetIsolationLevel()){
+    case IsolationLevel::READ_UNCOMMITTED:
+      if (lock_mode==LockMode::SHARED||lock_mode==LockMode::INTENTION_SHARED||lock_mode==LockMode::SHARED_INTENTION_EXCLUSIVE) {
+        txn->SetState(TransactionState::ABORTED);
+        throw TransactionAbortException(txn->GetTransactionId(),AbortReason::LOCK_SHARED_ON_READ_UNCOMMITTED);
+      }
+      if(txn->GetState()!=TransactionState::GROWING){
+        txn->SetState(TransactionState::ABORTED);
+        throw TransactionAbortException(txn->GetTransactionId(),AbortReason::LOCK_ON_SHRINKING);
+      }
+      break;
+    case IsolationLevel::REPEATABLE_READ:
+      if (txn->GetState()==TransactionState::SHRINKING) {
+        txn->SetState(TransactionState::ABORTED);
+        throw TransactionAbortException(txn->GetTransactionId(),AbortReason::LOCK_ON_SHRINKING);
+      }
+      break;
+    case IsolationLevel::READ_COMMITTED:
+      if (txn->GetState()==TransactionState::SHRINKING) {
+        if (lock_mode!=LockMode::SHARED&&lock_mode!=LockMode::INTENTION_SHARED) {
+          txn->SetState(TransactionState::ABORTED);
+          throw TransactionAbortException(txn->GetTransactionId(),AbortReason::LOCK_ON_SHRINKING);
+        }
+      }
+      break;
+    default:
+      (void)txn;
+  }
+}
+
+auto LockManager::CheckUpgradeLockLevel(LockMode transaction_lock_mode,LockMode lock_mode)->bool{
+  switch (transaction_lock_mode) {
+    case LockMode::SHARED:
+      if (lock_mode==LockMode::EXCLUSIVE||lock_mode==LockMode::SHARED_INTENTION_EXCLUSIVE) {
+        return true;
+      }
+      break;
+    case LockMode::EXCLUSIVE:
+      break;
+    case LockMode::INTENTION_SHARED:
+      if (lock_mode==LockMode::SHARED||lock_mode==LockMode::EXCLUSIVE||lock_mode==LockMode::INTENTION_EXCLUSIVE||lock_mode==LockMode::SHARED_INTENTION_EXCLUSIVE) {
+        return true;
+      }
+      break;
+    case LockMode::INTENTION_EXCLUSIVE:
+      if (lock_mode==LockMode::EXCLUSIVE||lock_mode==LockMode::SHARED_INTENTION_EXCLUSIVE) {
+        return true;
+      }
+      break;
+    case LockMode::SHARED_INTENTION_EXCLUSIVE:
+      if (lock_mode==LockMode::EXCLUSIVE) {
+        return true;
+      }
+      break;
+    default:
+      break;
+  }
+  return false;
+}
+
+auto LockManager::GrantLock(std::shared_ptr<LockRequest> &lock_request,std::shared_ptr<LockRequestQueue> &lock_request_queue)->bool{
+  
 }
 
 }  // namespace bustub
