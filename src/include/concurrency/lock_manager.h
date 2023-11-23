@@ -327,6 +327,12 @@ class LockManager {
   auto GrantLock(const std::shared_ptr<LockRequest> &lock_request,const std::shared_ptr<LockRequestQueue> &lock_request_queue)->bool;
   //modify table locks
   void ModifyTableLocks(Transaction *txn,const std::shared_ptr<LockRequest> &lock_request,bool is_insert_mode);
+  //modify row locks
+  void ModifyRowLocks(Transaction *txn,const std::shared_ptr<LockRequest> &lock_request,bool is_insert_mode);
+  //insert, used in ModifyRowLocks
+  void InsertRowlocks(Transaction *txn,const std::shared_ptr<LockRequest> &lock_request);
+  //erase, used in ModifyRowLocks
+  void EraseRowlocks(Transaction *txn,const std::shared_ptr<LockRequest> &lock_request);
   //only S/X allowed in lockrow
   void CheckLockRowLockMode(Transaction *txn, LockMode lock_mode);
   //we need to have the corresponding table lock before having row lock。

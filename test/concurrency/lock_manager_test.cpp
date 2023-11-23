@@ -101,11 +101,13 @@ void TableLockTest1() {
       EXPECT_TRUE(res);
       CheckGrowing(txns[txn_id]);
     }
+    std::cout<<"lock successfully"<<std::endl;
     for (const table_oid_t &oid : oids) {
       res = lock_mgr.UnlockTable(txns[txn_id], oid);
       EXPECT_TRUE(res);
       CheckShrinking(txns[txn_id]);
     }
+    std::cout<<"unlock successfully"<<std::endl;
     txn_mgr.Commit(txns[txn_id]);
     CheckCommitted(txns[txn_id]);
 
@@ -128,7 +130,7 @@ void TableLockTest1() {
     delete txns[i];
   }
 }
-TEST(LockManagerTest, DISABLED_TableLockTest1) { TableLockTest1(); }  // NOLINT
+TEST(LockManagerTest, TableLockTest1) { TableLockTest1(); }  // NOLINT
 
 /** Upgrading single transaction from S -> X */
 void TableLockUpgradeTest1() {
@@ -153,7 +155,7 @@ void TableLockUpgradeTest1() {
 
   delete txn1;
 }
-TEST(LockManagerTest, DISABLED_TableLockUpgradeTest1) { TableLockUpgradeTest1(); }  // NOLINT
+TEST(LockManagerTest, TableLockUpgradeTest1) { TableLockUpgradeTest1(); }  // NOLINT
 
 void RowLockTest1() {
   LockManager lock_mgr{};
