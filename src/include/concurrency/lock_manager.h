@@ -312,7 +312,6 @@ class LockManager {
  private:
   /** Spring 2023 */
   /* You are allowed to modify all functions below. */
-  auto UpgradeLockRow(Transaction *txn, LockMode lock_mode, const table_oid_t &oid, const RID &rid) -> bool;
   auto CanTxnTakeLock(Transaction *txn, LockMode lock_mode) -> bool;
   void GrantNewLocksIfPossible(LockRequestQueue *lock_request_queue);
   auto CheckAppropriateLockOnTable(Transaction *txn, const table_oid_t &oid, LockMode row_lock_mode) -> bool;
@@ -328,9 +327,10 @@ class LockManager {
   auto GrantLock(const std::shared_ptr<LockRequest> &lock_request,const std::shared_ptr<LockRequestQueue> &lock_request_queue)->bool;
   //modify table locks
   void ModifyTableLocks(Transaction *txn,const std::shared_ptr<LockRequest> &lock_request,bool is_insert_mode);
-  //upgrade lock table
-  auto UpgradeLockTable(Transaction *txn, LockMode lock_mode, const table_oid_t &oid) -> bool;
-
+  //only S/X allowed in lockrow
+  void CheckLockRowLockMode(Transaction *txn, LockMode lock_mode);
+  //we need to have the corresponding table lock before having row lock。
+  void CheckLockRowTableIntension(Transaction *txn, LockMode lock_mode,const table_oid_t &oid);
 
   /** Structure that holds lock requests for a given table oid */
   std::unordered_map<table_oid_t, std::shared_ptr<LockRequestQueue>> table_lock_map_;
