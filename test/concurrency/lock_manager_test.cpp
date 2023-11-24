@@ -101,13 +101,13 @@ void TableLockTest1() {
       EXPECT_TRUE(res);
       CheckGrowing(txns[txn_id]);
     }
-    std::cout<<"lock successfully"<<std::endl;
+    // std::cout<<"lock successfully"<<std::endl;
     for (const table_oid_t &oid : oids) {
       res = lock_mgr.UnlockTable(txns[txn_id], oid);
       EXPECT_TRUE(res);
       CheckShrinking(txns[txn_id]);
     }
-    std::cout<<"unlock successfully"<<std::endl;
+    // std::cout<<"unlock successfully"<<std::endl;
     txn_mgr.Commit(txns[txn_id]);
     CheckCommitted(txns[txn_id]);
 
@@ -260,7 +260,7 @@ void TwoPLTest1() {
   delete txn;
 }
 
-TEST(LockManagerTest, DISABLED_TwoPLTest1) { TwoPLTest1(); }  // NOLINT
+TEST(LockManagerTest, TwoPLTest1) { TwoPLTest1(); }  // NOLINT
 
 void AbortTest1() {
   fmt::print(stderr, "AbortTest1: multiple X should block\n");
@@ -278,18 +278,24 @@ void AbortTest1() {
   /** All takes IX lock on table */
   EXPECT_EQ(true, lock_mgr.LockTable(txn1, LockManager::LockMode::INTENTION_EXCLUSIVE, oid));
   CheckTableLockSizes(txn1, 0, 0, 0, 1, 0);
+  // std::cout<<"lock table1"<<std::endl;
   EXPECT_EQ(true, lock_mgr.LockTable(txn2, LockManager::LockMode::INTENTION_EXCLUSIVE, oid));
   CheckTableLockSizes(txn2, 0, 0, 0, 1, 0);
+  // std::cout<<"lock table2"<<std::endl;
   EXPECT_EQ(true, lock_mgr.LockTable(txn3, LockManager::LockMode::INTENTION_EXCLUSIVE, oid));
   CheckTableLockSizes(txn3, 0, 0, 0, 1, 0);
+  // std::cout<<"lock table3"<<std::endl;
 
   /** txn1 takes X lock on row */
   EXPECT_EQ(true, lock_mgr.LockRow(txn1, LockManager::LockMode::EXCLUSIVE, oid, rid));
   CheckTxnRowLockSize(txn1, oid, 0, 1);
 
+  // std::cout<<"t1 lockrow"<<std::endl;
+
   /** txn2 attempts X lock on table but should be blocked */
   auto txn2_task = std::thread{[&]() { lock_mgr.LockRow(txn2, LockManager::LockMode::EXCLUSIVE, oid, rid); }};
 
+  // std::cout<<"t2 lockrow"<<std::endl;
   /** Sleep for a bit */
   std::this_thread::sleep_for(std::chrono::milliseconds(50));
   /** txn2 shouldn't have been granted the lock */
@@ -297,6 +303,7 @@ void AbortTest1() {
 
   /** txn3 attempts X lock on row but should be blocked */
   auto txn3_task = std::thread{[&]() { lock_mgr.LockRow(txn3, LockManager::LockMode::EXCLUSIVE, oid, rid); }};
+  // std::cout<<"t3 lockrow"<<std::endl;
   /** Sleep for a bit */
   std::this_thread::sleep_for(std::chrono::milliseconds(50));
   /** txn3 shouldn't have been granted the lock */
@@ -311,6 +318,7 @@ void AbortTest1() {
 
   txn2_task.join();
   txn3_task.join();
+  // std::cout<<"abort"<<std::endl;
   /** txn2 shouldn't have any row locks */
   CheckTxnRowLockSize(txn2, oid, 0, 0);
   CheckTableLockSizes(txn2, 0, 0, 0, 0, 0);

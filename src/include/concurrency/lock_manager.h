@@ -65,7 +65,8 @@ class LockManager {
   class LockRequestQueue {
    public:
     /** List of lock requests for the same resource (table or row) */
-    std::list<LockRequest *> request_queue_;
+    // std::list<LockRequest *> request_queue_;
+    std::list<std::shared_ptr<LockRequest>> request_queue_;
     /** For notifying blocked transactions on this rid */
     std::condition_variable cv_;
     /** txn_id of an upgrading transaction (if any) */
@@ -319,24 +320,25 @@ class LockManager {
                  std::unordered_set<txn_id_t> &visited, txn_id_t *abort_txn_id) -> bool;
   void UnlockAll();
 
-  //check if the lock_mode level is right
+  // check if the lock_mode level is right
   void CheckTransactionLevel(Transaction *txn, LockMode lock_mode);
-  //upgrade lock table
-  auto CheckUpgradeLockLevel(LockMode transaction_lock_mode,LockMode lock_mode)->bool;
-  //check the txn can successfully get the lock
-  auto GrantLock(const std::shared_ptr<LockRequest> &lock_request,const std::shared_ptr<LockRequestQueue> &lock_request_queue)->bool;
-  //modify table locks
-  void ModifyTableLocks(Transaction *txn,const std::shared_ptr<LockRequest> &lock_request,bool is_insert_mode);
-  //modify row locks
-  void ModifyRowLocks(Transaction *txn,const std::shared_ptr<LockRequest> &lock_request,bool is_insert_mode);
-  //insert, used in ModifyRowLocks
-  void InsertRowlocks(Transaction *txn,const std::shared_ptr<LockRequest> &lock_request);
-  //erase, used in ModifyRowLocks
-  void EraseRowlocks(Transaction *txn,const std::shared_ptr<LockRequest> &lock_request);
-  //only S/X allowed in lockrow
+  // upgrade lock table
+  auto CheckUpgradeLockLevel(LockMode transaction_lock_mode, LockMode lock_mode) -> bool;
+  // check the txn can successfully get the lock
+  auto GrantLock(const std::shared_ptr<LockRequest> &lock_request,
+                 const std::shared_ptr<LockRequestQueue> &lock_request_queue) -> bool;
+  // modify table locks
+  void ModifyTableLocks(Transaction *txn, const std::shared_ptr<LockRequest> &lock_request, bool is_insert_mode);
+  // modify row locks
+  void ModifyRowLocks(Transaction *txn, const std::shared_ptr<LockRequest> &lock_request, bool is_insert_mode);
+  // insert, used in ModifyRowLocks
+  void InsertRowlocks(Transaction *txn, const std::shared_ptr<LockRequest> &lock_request);
+  // erase, used in ModifyRowLocks
+  void EraseRowlocks(Transaction *txn, const std::shared_ptr<LockRequest> &lock_request);
+  // only S/X allowed in lockrow
   void CheckLockRowLockMode(Transaction *txn, LockMode lock_mode);
-  //we need to have the corresponding table lock before having row lock。
-  void CheckLockRowTableIntension(Transaction *txn, LockMode lock_mode,const table_oid_t &oid);
+  // we need to have the corresponding table lock before having row lock。
+  void CheckLockRowTableIntension(Transaction *txn, LockMode lock_mode, const table_oid_t &oid);
 
   /** Structure that holds lock requests for a given table oid */
   std::unordered_map<table_oid_t, std::shared_ptr<LockRequestQueue>> table_lock_map_;
