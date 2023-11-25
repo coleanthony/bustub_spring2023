@@ -15,15 +15,15 @@
 #include <algorithm>
 #include <condition_variable>  // NOLINT
 #include <list>
+#include <map>
 #include <memory>
 #include <mutex>  // NOLINT
+#include <queue>
+#include <set>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
 #include <vector>
-#include <set>
-#include <map>
-#include <queue>
 
 #include "common/config.h"
 #include "common/macros.h"
@@ -316,11 +316,6 @@ class LockManager {
  private:
   /** Spring 2023 */
   /* You are allowed to modify all functions below. */
-  auto CanTxnTakeLock(Transaction *txn, LockMode lock_mode) -> bool;
-  void GrantNewLocksIfPossible(LockRequestQueue *lock_request_queue);
-  auto CheckAppropriateLockOnTable(Transaction *txn, const table_oid_t &oid, LockMode row_lock_mode) -> bool;
-  auto FindCycle(txn_id_t source_txn, std::vector<txn_id_t> &path, std::unordered_set<txn_id_t> &on_path,
-                 std::unordered_set<txn_id_t> &visited, txn_id_t *abort_txn_id) -> bool;
 
   // check if the lock_mode level is right
   void CheckTransactionLevel(Transaction *txn, LockMode lock_mode);
@@ -341,8 +336,10 @@ class LockManager {
   void CheckLockRowLockMode(Transaction *txn, LockMode lock_mode);
   // we need to have the corresponding table lock before having row lock。
   void CheckLockRowTableIntension(Transaction *txn, LockMode lock_mode, const table_oid_t &oid);
-  //unlock all
+  // unlock all
   void UnlockAll();
+  // use in cycle detection,delete locks
+  void DeleteTransactionLocks(txn_id_t txn_id);
 
   /** Structure that holds lock requests for a given table oid */
   std::unordered_map<table_oid_t, std::shared_ptr<LockRequestQueue>> table_lock_map_;
@@ -361,8 +358,8 @@ class LockManager {
   std::unordered_map<txn_id_t, std::unordered_set<txn_id_t>> waits_for_;
   std::mutex waits_for_latch_;
   std::set<txn_id_t> transaction_set_;
-  std::unordered_map<txn_id_t,oid_t> txn_to_oid_;
-  std::unordered_map<txn_id_t,RID> txn_to_rid_;
+  std::unordered_map<txn_id_t, std::vector<oid_t>> txn_to_oid_;
+  std::unordered_map<txn_id_t, std::vector<RID>> txn_to_rid_;
 };
 
 }  // namespace bustub
