@@ -65,7 +65,7 @@ auto UpdateExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) -> bool {
     for (auto indexes : table_indexes_) {
       auto key_attr = indexes->index_->GetKeyAttrs();
       auto index_tuple = inserted_tuple.KeyFromTuple(table_info_->schema_, indexes->key_schema_, key_attr);
-      indexes->index_->InsertEntry(index_tuple, inserted_tuple_rid.value(), nullptr);
+      indexes->index_->InsertEntry(index_tuple, inserted_tuple_rid.value(), exec_ctx_->GetTransaction());
     }
   }
 
