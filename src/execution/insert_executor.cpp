@@ -37,7 +37,7 @@ void InsertExecutor::Init() {
     if (!getlock) {
       throw ExecutionException("InsertExecutor try to get IX lock failed");
     }
-  } catch(TransactionAbortException e){
+  } catch(TransactionAbortException &e){
     throw ExecutionException("Insert table Transaction Abort");
   }
 

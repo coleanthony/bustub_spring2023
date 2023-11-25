@@ -34,7 +34,7 @@ void SeqScanExecutor::Init() {
       if (!lock_success) {
         throw ExecutionException("SeqScanExecutor try to get IX lock failed in delete mode");
       }
-    }catch (TransactionAbortException e){
+    }catch (TransactionAbortException &e){
       throw ExecutionException("SeqScan table Transaction Abort in delete mode");
     }
   }else{
@@ -47,7 +47,7 @@ void SeqScanExecutor::Init() {
           if (!lock_success) {
             throw ExecutionException("SeqScanExecutor try to get IS lock failed");
           }
-        }catch (TransactionAbortException e){
+        }catch (TransactionAbortException &e){
           throw ExecutionException("SeqScan table Transaction Abort");
         }
       }
@@ -68,7 +68,7 @@ auto SeqScanExecutor::Next(Tuple *tuple, RID *rid) -> bool {
             if (!unlock_success) {
               throw ExecutionException("SeqScanExecutor try to unlock failed");
             }
-          }catch(TransactionAbortException e){
+          }catch(TransactionAbortException &e){
             throw ExecutionException("Unlock SeqScan table Transaction Abort");
           }
         }
@@ -84,7 +84,7 @@ auto SeqScanExecutor::Next(Tuple *tuple, RID *rid) -> bool {
         if (!lock_success) {
           throw ExecutionException("SeqScanExecutor lockrow try to get X lock failed in delete mode");
         }
-      }catch (TransactionAbortException e){
+      }catch (TransactionAbortException &e){
         throw ExecutionException("SeqScan row Transaction Abort in delete mode");
       }
     }else{
@@ -96,7 +96,7 @@ auto SeqScanExecutor::Next(Tuple *tuple, RID *rid) -> bool {
             if (!lock_success) {
               throw ExecutionException("SeqScanExecutor lockrow try to get S lock failed");
             }
-          }catch (TransactionAbortException e){
+          }catch (TransactionAbortException &e){
             throw ExecutionException("SeqScan row Transaction Abort");
           }
         }
@@ -117,7 +117,7 @@ auto SeqScanExecutor::Next(Tuple *tuple, RID *rid) -> bool {
             if (!unlock_success) {
               throw ExecutionException("SeqScanExecutor try to unlock row failed");
             }
-          }catch(TransactionAbortException e){
+          }catch(TransactionAbortException &e){
               throw ExecutionException("Unlock SeqScan row Transaction Abort");
           }
         }
@@ -132,7 +132,7 @@ auto SeqScanExecutor::Next(Tuple *tuple, RID *rid) -> bool {
           if (!unlock_success) {
             throw ExecutionException("SeqScanExecutor try to unlock Slock failed");
           }
-        }catch(TransactionAbortException e){
+        }catch(TransactionAbortException &e){
           throw ExecutionException("Unlock SeqScan Slock Transaction Abort");
         }        
       }
