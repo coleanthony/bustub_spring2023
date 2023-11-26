@@ -358,7 +358,7 @@ class LockManager {
   std::thread *cycle_detection_thread_;
   /** Waits-for graph representation. */
   // std::unordered_map<txn_id_t, std::vector<txn_id_t>> waits_for_;
-  std::unordered_map<txn_id_t, std::unordered_set<txn_id_t>> waits_for_;
+  std::unordered_map<txn_id_t, std::set<txn_id_t>> waits_for_;
   std::mutex waits_for_latch_;
   std::set<txn_id_t> transaction_set_;
   std::unordered_map<txn_id_t, std::vector<oid_t>> txn_to_oid_;

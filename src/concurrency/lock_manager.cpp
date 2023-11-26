@@ -351,7 +351,7 @@ void LockManager::UnlockAll() {
 
 void LockManager::AddEdge(txn_id_t t1, txn_id_t t2) {
   if (waits_for_.find(t1) == waits_for_.end()) {
-    waits_for_.emplace(t1, std::unordered_set<txn_id_t>{});
+    waits_for_.emplace(t1, std::set<txn_id_t>{});
   }
   waits_for_[t1].insert(t2);
 }
