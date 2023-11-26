@@ -33,29 +33,31 @@ void TransactionManager::Commit(Transaction *txn) {
 void TransactionManager::Abort(Transaction *txn) {
   /* TODO: revert all the changes in write set */
   while (!txn->GetWriteSet()->empty()) {
-    auto table_write_record=txn->GetWriteSet()->back();
-    if (table_write_record.wtype_==WType::INSERT) {
-      auto tuplemeta=table_write_record.table_heap_->GetTupleMeta(table_write_record.rid_);
-      tuplemeta.is_deleted_=true;
+    auto table_write_record = txn->GetWriteSet()->back();
+    if (table_write_record.wtype_ == WType::INSERT) {
+      auto tuplemeta = table_write_record.table_heap_->GetTupleMeta(table_write_record.rid_);
+      tuplemeta.is_deleted_ = true;
       table_write_record.table_heap_->UpdateTupleMeta(tuplemeta, table_write_record.rid_);
-    }else if (table_write_record.wtype_==WType::DELETE) {
-      auto tuplemeta=table_write_record.table_heap_->GetTupleMeta(table_write_record.rid_);
-      tuplemeta.is_deleted_=false;
+    } else if (table_write_record.wtype_ == WType::DELETE) {
+      auto tuplemeta = table_write_record.table_heap_->GetTupleMeta(table_write_record.rid_);
+      tuplemeta.is_deleted_ = false;
       table_write_record.table_heap_->UpdateTupleMeta(tuplemeta, table_write_record.rid_);
-    }else{
-      //no need in update
+    } else {
+      // no need in update
     }
 
     txn->GetWriteSet()->pop_back();
   }
   while (!txn->GetIndexWriteSet()->empty()) {
-    auto index_write_record=txn->GetIndexWriteSet()->back();
-    if (index_write_record.wtype_==WType::INSERT) {
-      index_write_record.catalog_->GetIndex(index_write_record.index_oid_)->index_->DeleteEntry(index_write_record.tuple_, index_write_record.rid_, txn);
-    }else if (index_write_record.wtype_==WType::DELETE) {
-      index_write_record.catalog_->GetIndex(index_write_record.index_oid_)->index_->InsertEntry(index_write_record.tuple_, index_write_record.rid_, txn);
-    }else{
-      //no need in update
+    auto index_write_record = txn->GetIndexWriteSet()->back();
+    if (index_write_record.wtype_ == WType::INSERT) {
+      index_write_record.catalog_->GetIndex(index_write_record.index_oid_)
+          ->index_->DeleteEntry(index_write_record.tuple_, index_write_record.rid_, txn);
+    } else if (index_write_record.wtype_ == WType::DELETE) {
+      index_write_record.catalog_->GetIndex(index_write_record.index_oid_)
+          ->index_->InsertEntry(index_write_record.tuple_, index_write_record.rid_, txn);
+    } else {
+      // no need in update
     }
 
     txn->GetIndexWriteSet()->pop_back();
