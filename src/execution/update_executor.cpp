@@ -57,7 +57,8 @@ auto UpdateExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) -> bool {
 
     // insert value
     Tuple inserted_tuple = Tuple(values, &child_executor_->GetOutputSchema());
-    auto inserted_tuple_rid = table_info_->table_->InsertTuple(tuplemeta, inserted_tuple);
+    auto inserted_tuple_rid = table_info_->table_->InsertTuple(tuplemeta, inserted_tuple, exec_ctx_->GetLockManager(),
+                                                               exec_ctx_->GetTransaction(), plan_->TableOid());
     if (inserted_tuple_rid == std::nullopt) {
       continue;
     }

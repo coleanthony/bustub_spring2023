@@ -55,7 +55,8 @@ auto InsertExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) -> bool {
   int inserted_count = 0;
   while (child_executor_->Next(tuple, rid)) {
     TupleMeta tuplemeta{};
-    auto inserted_tuple_rid = table_info_->table_->InsertTuple(tuplemeta, *tuple);
+    auto inserted_tuple_rid = table_info_->table_->InsertTuple(tuplemeta, *tuple, exec_ctx_->GetLockManager(),
+                                                               exec_ctx_->GetTransaction(), plan_->TableOid());
     if (inserted_tuple_rid.has_value()) {
       // insert data successfully
       inserted_count++;

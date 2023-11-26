@@ -340,6 +340,9 @@ class LockManager {
   void UnlockAll();
   // use in cycle detection,delete locks
   void DeleteTransactionLocks(txn_id_t txn_id);
+  // dfs to search cycle id
+  auto DFSCycle(txn_id_t cur_txn, std::unordered_set<txn_id_t> &visted, std::set<txn_id_t> &txnset,
+                std::set<txn_id_t> &txncurstk) -> bool;
 
   /** Structure that holds lock requests for a given table oid */
   std::unordered_map<table_oid_t, std::shared_ptr<LockRequestQueue>> table_lock_map_;
@@ -360,6 +363,7 @@ class LockManager {
   std::set<txn_id_t> transaction_set_;
   std::unordered_map<txn_id_t, std::vector<oid_t>> txn_to_oid_;
   std::unordered_map<txn_id_t, std::vector<RID>> txn_to_rid_;
+  txn_id_t cycle_id_{0};
 };
 
 }  // namespace bustub

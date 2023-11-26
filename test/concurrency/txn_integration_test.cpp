@@ -49,10 +49,39 @@ TEST(VisibilityTest, TestA) {
   Test1(IsolationLevel::READ_COMMITTED);
 }
 
+TEST(VisibilityTest, TestB) {
+  auto db = GetDbForVisibilityTest("Test1");
+  auto txn1 = Begin(*db, IsolationLevel::READ_COMMITTED);
+  Delete(txn1, *db, 233);
+  Commit(*db, txn1);
+  auto txn2 = Begin(*db, IsolationLevel::READ_UNCOMMITTED);
+  Scan(txn2, *db, {234});
+  Commit(*db, txn2);
+}
+
+TEST(VisibilityTest, TestC) {
+  auto db = GetDbForVisibilityTest("Test1");
+  auto txn1 = Begin(*db, IsolationLevel::READ_COMMITTED);
+  Delete(txn1, *db, 233);
+  Commit(*db, txn1);
+  auto txn2 = Begin(*db, IsolationLevel::READ_UNCOMMITTED);
+  Scan(txn2, *db, {234});
+  Commit(*db, txn2);
+}
+
 // NOLINTNEXTLINE
 TEST(IsolationLevelTest, InsertTestA) {
   ExpectTwoTxn("InsertTestA.1", IsolationLevel::READ_UNCOMMITTED, IsolationLevel::READ_UNCOMMITTED, false, IS_INSERT,
                ExpectedOutcome::DirtyRead);
+}
+
+TEST(IsolationLevelTest, DeleteTestA) {
+  ExpectTwoTxn("DeleteTestA.2", IsolationLevel::READ_UNCOMMITTED, IsolationLevel::READ_COMMITTED, false, IS_DELETE,
+               ExpectedOutcome::DirtyRead);
+  ExpectTwoTxn("DeleteTestA.3", IsolationLevel::READ_COMMITTED, IsolationLevel::READ_UNCOMMITTED, false, IS_DELETE,
+               ExpectedOutcome::BlockOnRead);
+  ExpectTwoTxn("DeleteTestA.4", IsolationLevel::READ_COMMITTED, IsolationLevel::READ_COMMITTED, false, IS_DELETE,
+               ExpectedOutcome::BlockOnRead);
 }
 
 }  // namespace bustub

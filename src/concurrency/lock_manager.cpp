@@ -362,7 +362,7 @@ auto LockManager::HasCycle(txn_id_t *txn_id) -> bool {
   // store the transaction id of the youngest transaction in the cycle in txn_id and return true.
   // else return false
   // use topological sort
-  std::map<txn_id_t, int> toporeder;
+  std::unordered_map<txn_id_t, int> toporeder;
   std::unordered_map<txn_id_t, std::vector<txn_id_t>> for_wait;
   for (auto num : transaction_set_) {
     toporeder.emplace(num, 0);
@@ -390,18 +390,49 @@ auto LockManager::HasCycle(txn_id_t *txn_id) -> bool {
       }
     }
   }
-  txn_id_t cycle_id = -1;
-  for (auto iter = toporeder.rbegin(); iter != toporeder.rend(); iter++) {
-    if (iter->second != 0) {
-      cycle_id = iter->first;
-      break;
+
+  std::set<txn_id_t> txnset;
+  for (auto &iter : toporeder) {
+    if (iter.second != 0) {
+      txnset.insert(iter.first);
     }
   }
-  if (cycle_id == -1) {
+  if (txnset.empty()) {
     return false;
   }
-  *txn_id = cycle_id;
-  return true;
+
+  // has circle,use dfs to get the cycle_id
+  std::unordered_set<txn_id_t> visted;
+  std::set<txn_id_t> txncurstk;
+
+  for (auto cur_txn : txnset) {
+    if (visted.count(cur_txn) == 0 && DFSCycle(cur_txn, visted, txnset, txncurstk)) {
+      *txn_id = cycle_id_;
+      return true;
+    }
+  }
+  return false;
+}
+
+auto LockManager::DFSCycle(txn_id_t cur_txn, std::unordered_set<txn_id_t> &visted, std::set<txn_id_t> &txnset,
+                           std::set<txn_id_t> &txncurstk) -> bool {
+  visted.insert(cur_txn);
+  txncurstk.insert(cur_txn);
+  for (txn_id_t nextid : waits_for_[cur_txn]) {
+    if (txnset.count(nextid) != 0) {
+      if (visted.count(nextid) == 0) {
+        if (DFSCycle(nextid, visted, txnset, txncurstk)) {
+          return true;
+        }
+      } else if (txncurstk.count(nextid) != 0) {
+        cycle_id_ = *txncurstk.rbegin();
+        // std::cout<<"cycleid"<<cycle_id_<<std::endl;
+        return true;
+      }
+    }
+  }
+  txncurstk.erase(cur_txn);
+  return false;
 }
 
 auto LockManager::GetEdgeList() -> std::vector<std::pair<txn_id_t, txn_id_t>> {
