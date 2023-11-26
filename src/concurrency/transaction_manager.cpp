@@ -31,7 +31,7 @@ void TransactionManager::Commit(Transaction *txn) {
 }
 
 void TransactionManager::Abort(Transaction *txn) {
-  /* TODO: revert all the changes in write set */
+  // TODO(cwh): revert all the changes in write set
   while (!txn->GetWriteSet()->empty()) {
     auto table_write_record = txn->GetWriteSet()->back();
     if (table_write_record.wtype_ == WType::INSERT) {

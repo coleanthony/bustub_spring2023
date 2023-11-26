@@ -54,17 +54,17 @@ auto InsertExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) -> bool {
   }
   int inserted_count = 0;
   while (child_executor_->Next(tuple, rid)) {
-    TupleMeta tuplemeta{};
+    TupleMeta tuplemeta{INVALID_TXN_ID, INVALID_TXN_ID, false};
     auto inserted_tuple_rid = table_info_->table_->InsertTuple(tuplemeta, *tuple, exec_ctx_->GetLockManager(),
                                                                exec_ctx_->GetTransaction(), plan_->TableOid());
     if (inserted_tuple_rid.has_value()) {
       // insert data successfully
+      *rid = inserted_tuple_rid.value();
       inserted_count++;
       auto tbl_write_record = TableWriteRecord(table_info_->oid_, *rid, table_info_->table_.get());
       tbl_write_record.wtype_ = WType::INSERT;
       exec_ctx_->GetTransaction()->AppendTableWriteRecord(tbl_write_record);
 
-      *rid = inserted_tuple_rid.value();
       for (auto indexes : table_indexes_) {
         auto key_attr = indexes->index_->GetKeyAttrs();
         auto index_tuple = tuple->KeyFromTuple(table_info_->schema_, *(indexes->index_->GetKeySchema()), key_attr);
