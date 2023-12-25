@@ -167,7 +167,7 @@ $ make check-tests
 ```
 
 ## Learning
-### Lecture
+### Lectures
 | Schedule    |                        Content                     | Condition |
 | ----------- | -------------------------------------------------- | --------- |
 | Lecture #01 | Course Overview & Relational Model                 |     √     |
@@ -187,8 +187,8 @@ $ make check-tests
 | Lecture #15 | Concurrency Control Theory                         |     √     |
 | Lecture #16 | Two-Phase Locking Concurrency Control              |     √     |
 | Lecture #17 | Timestamp Ordering Concurrency Control             |     √     |
-| Lecture #18 | Multi-Version Concurrency Control                  |           |
-| Lecture #19 | Database Logging                                   |           |
+| Lecture #18 | Multi-Version Concurrency Control                  |     √     |
+| Lecture #19 | Database Logging                                   |     √     |
 | Lecture #20 | Database Recovery                                  |     √     |
 | Lecture #21 | Introduction to Distributed Databases              |           |
 | Lecture #22 | Distributed OLTP Database Systems                  |           |
@@ -197,7 +197,7 @@ $ make check-tests
 | Lecture #25 | Guest Speaker: Snowflake                           |           |
 | Lecture #26 | Final Review                                       |           |
 
-### Lab
+### Labs
 | Schedule   |             Content           | Condition |
 | ---------- | ------------------------------| --------- |
 | Project #0 | C++ Primer                    |     √     |
