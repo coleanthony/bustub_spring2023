@@ -190,12 +190,12 @@ $ make check-tests
 | Lecture #18 | Multi-Version Concurrency Control                  |     √     |
 | Lecture #19 | Database Logging                                   |     √     |
 | Lecture #20 | Database Recovery                                  |     √     |
-| Lecture #21 | Introduction to Distributed Databases              |           |
-| Lecture #22 | Distributed OLTP Database Systems                  |           |
-| Lecture #23 | Distributed OLAP Database Systems                  |           |
-| Lecture #24 | Putting Application Logic into the Database        |           |
-| Lecture #25 | Guest Speaker: Snowflake                           |           |
-| Lecture #26 | Final Review                                       |           |
+| Lecture #21 | Introduction to Distributed Databases              |     √     |
+| Lecture #22 | Distributed OLTP Database Systems                  |     √     |
+| Lecture #23 | Distributed OLAP Database Systems                  |     √     |
+| Lecture #24 | Putting Application Logic into the Database        |     √     |
+| Lecture #25 | Guest Speaker: Snowflake                           |     √     |
+| Lecture #26 | Final Review                                       |     √     |
 
 ### Labs
 | Schedule   |             Content           | Condition |
