@@ -12,6 +12,46 @@ BusTub supports basic SQL and comes with an interactive shell. You can get it ru
 
 **WARNING: IF YOU ARE A STUDENT IN THE CLASS, DO NOT DIRECTLY FORK THIS REPO. DO NOT PUSH PROJECT SOLUTIONS PUBLICLY. THIS IS AN ACADEMIC INTEGRITY VIOLATION AND CAN LEAD TO GETTING YOUR DEGREE REVOKED, EVEN AFTER YOU GRADUATE.**
 
+## Learning
+### Lectures
+| Schedule    |                        Content                     | Condition |
+| ----------- | -------------------------------------------------- | --------- |
+| Lecture #01 | Course Overview & Relational Model                 |     √     |
+| Lecture #02 | Advanced SQL                                       |     √     |
+| Lecture #03 | Database Storage I                                 |     √     |
+| Lecture #04 | Database Storage II                                |     √     |
+| Lecture #05 | Storage Models & Compression                       |     √     |
+| Lecture #06 | Memory Management                                  |     √     |
+| Lecture #07 | Hash Tables                                        |     √     |
+| Lecture #08 | Trees Indexes                                      |     √     |
+| Lecture #09 | Index Concurrency Control                          |     √     |
+| Lecture #10 | Sorting & Aggregations Algorithms                  |     √     |
+| Lecture #11 | Joins Algorithms                                   |     √     |
+| Lecture #12 | Query Execution I                                  |     √     |
+| Lecture #13 | Query Execution II                                 |     √     |
+| Lecture #14 | Query Planning & Optimization                      |     √     |
+| Lecture #15 | Concurrency Control Theory                         |     √     |
+| Lecture #16 | Two-Phase Locking Concurrency Control              |     √     |
+| Lecture #17 | Timestamp Ordering Concurrency Control             |     √     |
+| Lecture #18 | Multi-Version Concurrency Control                  |     √     |
+| Lecture #19 | Database Logging                                   |     √     |
+| Lecture #20 | Database Recovery                                  |     √     |
+| Lecture #21 | Introduction to Distributed Databases              |     √     |
+| Lecture #22 | Distributed OLTP Database Systems                  |     √     |
+| Lecture #23 | Distributed OLAP Database Systems                  |     √     |
+| Lecture #24 | Putting Application Logic into the Database        |     √     |
+| Lecture #25 | Guest Speaker: Snowflake                           |     √     |
+| Lecture #26 | Final Review                                       |     √     |
+
+### Labs
+| Schedule   |             Content           | Condition |
+| ---------- | ------------------------------| --------- |
+| Project #0 | C++ Primer                    |     √     |
+| Project #1 | Buffer Pool Manager           |     √     |
+| Project #2 | B+Tree Index                  |     √     |
+| Project #3 | Query Execution               |     √     |
+| Project #4 | Concurrency Control           |     √     |
+
 ## Cloning this Repository
 
 The following instructions are adapted from the Github documentation on [duplicating a repository](https://docs.github.com/en/github/creating-cloning-and-archiving-repositories/creating-a-repository-on-github/duplicating-a-repository). The procedure below walks you through creating a private BusTub repository that you can use for development.
@@ -165,43 +205,3 @@ to open a shell within the box. You can find Bustub's code mounted at `/bustub` 
 $ cd build
 $ make check-tests
 ```
-
-## Learning
-### Lectures
-| Schedule    |                        Content                     | Condition |
-| ----------- | -------------------------------------------------- | --------- |
-| Lecture #01 | Course Overview & Relational Model                 |     √     |
-| Lecture #02 | Advanced SQL                                       |     √     |
-| Lecture #03 | Database Storage I                                 |     √     |
-| Lecture #04 | Database Storage II                                |     √     |
-| Lecture #05 | Storage Models & Compression                       |     √     |
-| Lecture #06 | Memory Management                                  |     √     |
-| Lecture #07 | Hash Tables                                        |     √     |
-| Lecture #08 | Trees Indexes                                      |     √     |
-| Lecture #09 | Index Concurrency Control                          |     √     |
-| Lecture #10 | Sorting & Aggregations Algorithms                  |     √     |
-| Lecture #11 | Joins Algorithms                                   |     √     |
-| Lecture #12 | Query Execution I                                  |     √     |
-| Lecture #13 | Query Execution II                                 |     √     |
-| Lecture #14 | Query Planning & Optimization                      |     √     |
-| Lecture #15 | Concurrency Control Theory                         |     √     |
-| Lecture #16 | Two-Phase Locking Concurrency Control              |     √     |
-| Lecture #17 | Timestamp Ordering Concurrency Control             |     √     |
-| Lecture #18 | Multi-Version Concurrency Control                  |     √     |
-| Lecture #19 | Database Logging                                   |     √     |
-| Lecture #20 | Database Recovery                                  |     √     |
-| Lecture #21 | Introduction to Distributed Databases              |     √     |
-| Lecture #22 | Distributed OLTP Database Systems                  |     √     |
-| Lecture #23 | Distributed OLAP Database Systems                  |     √     |
-| Lecture #24 | Putting Application Logic into the Database        |     √     |
-| Lecture #25 | Guest Speaker: Snowflake                           |     √     |
-| Lecture #26 | Final Review                                       |     √     |
-
-### Labs
-| Schedule   |             Content           | Condition |
-| ---------- | ------------------------------| --------- |
-| Project #0 | C++ Primer                    |     √     |
-| Project #1 | Buffer Pool Manager           |     √     |
-| Project #2 | B+Tree Index                  |     √     |
-| Project #3 | Query Execution               |     √     |
-| Project #4 | Concurrency Control           |     √     |
